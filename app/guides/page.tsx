@@ -1,27 +1,22 @@
 import type { Metadata } from "next";
 
-import { buildMetadata } from "@/lib/site-metadata";
+import { PageHero, PageLayout, PageSection } from "@/components/page-layout";
 import { guideTopics } from "@/lib/site-content";
+import { createPageMetadata, getPageMetadataEntry } from "@/lib/site-metadata";
 
-export const metadata: Metadata = buildMetadata(
-  "가이드",
-  "이미지 최적화와 포맷 선택을 다루는 한국어 가이드 허브 페이지입니다.",
-);
+export const metadata: Metadata = createPageMetadata(getPageMetadataEntry("/guides"));
 
 export default function GuidesPage() {
   return (
-    <div className="page-stack">
-      <section className="hero">
-        <p className="hero__eyebrow">Guides</p>
-        <h1>도구 사용 전후 맥락을 설명하는 가이드 허브</h1>
+    <PageLayout breadcrumbs={[{ href: "/", label: "홈" }, { label: "가이드" }]}>
+      <PageHero eyebrow="Guides" title="도구 사용 전후 맥락을 설명하는 가이드 허브">
         <p>
           검색 유입과 도구 페이지 연결을 고려해, 실제 기능 구현 전에도 읽을 수
           있는 설명성 콘텐츠를 배치했습니다.
         </p>
-      </section>
+      </PageHero>
 
-      <section className="panel">
-        <h2>준비된 주제</h2>
+      <PageSection title="준비된 주제">
         <div className="card-grid">
           {guideTopics.map((topic) => (
             <article className="card" key={topic}>
@@ -30,8 +25,7 @@ export default function GuidesPage() {
             </article>
           ))}
         </div>
-      </section>
-    </div>
+      </PageSection>
+    </PageLayout>
   );
 }
-
