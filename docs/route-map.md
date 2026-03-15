@@ -21,6 +21,11 @@ Routing rules:
 - `/tools/convert-image`
 - `/tools/remove-exif`
 - `/guides`
+- `/guides/resize-or-compress-first`
+- `/guides/transparent-image-conversion-checklist`
+- `/guides/why-converted-images-get-larger`
+- `/guides/batch-processing-preflight-checklist`
+- `/guides/browser-local-image-processing-limits`
 - `/guides/image-compression-basics`
 - `/guides/webp-vs-jpeg-vs-png`
 - `/guides/remove-exif-for-privacy`
@@ -91,6 +96,46 @@ Purpose:
 - act as the guide index
 - link to all guide articles
 - support internal linking between content and tool pages
+
+### `/guides/resize-or-compress-first`
+
+Purpose:
+
+- explain when resize should happen before compression
+- help users choose a safer workflow order
+- connect resize and compression tools with a practical decision guide
+
+### `/guides/transparent-image-conversion-checklist`
+
+Purpose:
+
+- explain what breaks when transparent images are converted carelessly
+- help users choose between JPEG, PNG, and WebP for transparent assets
+- connect common conversion mistakes to the format conversion tool
+
+### `/guides/why-converted-images-get-larger`
+
+Purpose:
+
+- explain why format conversion can increase file size
+- help users check format, resolution, and quality together
+- connect conversion decisions back to resize and compression tools
+
+### `/guides/batch-processing-preflight-checklist`
+
+Purpose:
+
+- explain how to group files before batch processing
+- reduce avoidable rework in compression, resize, and conversion flows
+- connect guide content to the current batch export workflow
+
+### `/guides/browser-local-image-processing-limits`
+
+Purpose:
+
+- explain the realistic limits of browser-only image processing
+- set expectations for large files, large batches, and browser behavior
+- reinforce the local-processing promise without overstating it
 
 ### `/about`
 

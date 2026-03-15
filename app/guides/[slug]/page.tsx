@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PageHero, PageLayout, PageSection } from "@/components/page-layout";
-import { guideRoutes, getToolRoute } from "@/lib/site-content";
+import { getGuideRoute, guideRoutes, getToolRoute } from "@/lib/site-content";
 import { createPageMetadata } from "@/lib/site-metadata";
 
 type GuideDetailPageProps = {
@@ -46,7 +46,7 @@ export default async function GuideDetailPage(
   }
 
   const relatedTools = guide.relatedTools.map((toolSlug) => getToolRoute(toolSlug));
-  const siblingGuides = guideRoutes.filter((entry) => entry.slug !== guide.slug).slice(0, 2);
+  const relatedGuides = guide.relatedGuides.map((guideSlug) => getGuideRoute(guideSlug));
 
   return (
     <PageLayout
@@ -59,7 +59,9 @@ export default async function GuideDetailPage(
       <PageHero eyebrow="실전 가이드" title={guide.title}>
         <p>{guide.description}</p>
         <p>{guide.intro}</p>
-        <p>예상 읽기 시간: {guide.readTime}</p>
+        <p>
+          주제: {guide.categoryLabel} / 예상 읽기 시간: {guide.readTime}
+        </p>
         <div className="hero__actions">
           <Link className="button-link" href={relatedTools[0].href}>
             {relatedTools[0].title} 바로가기
@@ -117,10 +119,10 @@ export default async function GuideDetailPage(
 
       <PageSection
         title="함께 읽으면 좋은 가이드"
-        intro={<p>같은 흐름에서 자주 함께 보는 문서를 이어서 읽을 수 있습니다.</p>}
+        intro={<p>같은 흐름에서 이어서 판단하기 좋은 문서를 함께 연결했습니다.</p>}
       >
         <div className="card-grid">
-          {siblingGuides.map((entry) => (
+          {relatedGuides.map((entry) => (
             <article className="card" key={entry.slug}>
               <h3>{entry.title}</h3>
               <p>{entry.description}</p>

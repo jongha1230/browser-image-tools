@@ -23,6 +23,11 @@ describe("site content scaffold", () => {
       "/tools/convert-image",
       "/tools/remove-exif",
       "/guides",
+      "/guides/resize-or-compress-first",
+      "/guides/transparent-image-conversion-checklist",
+      "/guides/why-converted-images-get-larger",
+      "/guides/batch-processing-preflight-checklist",
+      "/guides/browser-local-image-processing-limits",
       "/guides/image-compression-basics",
       "/guides/webp-vs-jpeg-vs-png",
       "/guides/remove-exif-for-privacy",
@@ -62,6 +67,11 @@ describe("site content scaffold", () => {
 
   it("publishes unique guide routes with related tools", () => {
     expect(guideRoutes.map((guide) => guide.href)).toEqual([
+      "/guides/resize-or-compress-first",
+      "/guides/transparent-image-conversion-checklist",
+      "/guides/why-converted-images-get-larger",
+      "/guides/batch-processing-preflight-checklist",
+      "/guides/browser-local-image-processing-limits",
       "/guides/image-compression-basics",
       "/guides/webp-vs-jpeg-vs-png",
       "/guides/remove-exif-for-privacy",
@@ -73,9 +83,15 @@ describe("site content scaffold", () => {
 
     for (const guide of guideRoutes) {
       expect(guide.relatedTools.length).toBeGreaterThan(0);
+      expect(guide.relatedGuides.length).toBeGreaterThan(0);
       expect(
         guide.relatedTools.every((toolSlug) =>
           toolRoutes.some((tool) => tool.slug === toolSlug),
+        ),
+      ).toBe(true);
+      expect(
+        guide.relatedGuides.every((guideSlug) =>
+          guideRoutes.some((entry) => entry.slug === guideSlug),
         ),
       ).toBe(true);
     }
