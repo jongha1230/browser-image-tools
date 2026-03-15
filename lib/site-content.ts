@@ -76,9 +76,9 @@ export type GuideRoute =
   | GuideRouteBase<"batch-resize-checklist">;
 
 export const siteName = "브라우저 이미지 툴";
-export const siteTagline = "브라우저 안에서 끝내는 한국어 이미지 작업 도구";
+export const siteTagline = "브라우저에서 이미지 압축·리사이즈·변환·EXIF 제거";
 export const siteDescription =
-  "이미지 압축, 크기 조절, 포맷 변환, EXIF 제거와 배치 내보내기를 모두 브라우저 안에서 처리하는 한국어 이미지 유틸리티 사이트입니다.";
+  "이미지 압축, 리사이즈, 포맷 변환, EXIF 제거와 배치 내보내기를 브라우저에서 처리하는 로컬 이미지 도구입니다.";
 
 export const primaryNav = [
   { href: "/tools", label: "도구" },
@@ -101,9 +101,9 @@ export const toolRoutes = [
     title: "이미지 압축",
     shortLabel: "압축",
     description:
-      "사진과 캡처를 업로드 전에 더 가볍게 정리할 수 있는 이미지 압축 도구입니다.",
+      "업로드 전에 JPEG, PNG, WebP 파일 크기를 줄이는 이미지 압축 도구입니다.",
     metadataDescription:
-      "브라우저 안에서 JPG, PNG, WebP 이미지 용량을 줄이고 결과를 개별 저장 또는 ZIP으로 내려받는 이미지 압축 도구 페이지입니다.",
+      "브라우저에서 JPEG, PNG, WebP 이미지 용량을 줄이고 결과를 개별 저장하거나 ZIP으로 내려받는 이미지 압축 도구 페이지입니다.",
     intro:
       "커뮤니티, 블로그, 쇼핑몰 업로드 전에 여러 장의 파일 크기를 한 번에 줄이는 흐름에 맞춰 구성했습니다.",
     highlights: [
@@ -124,9 +124,9 @@ export const toolRoutes = [
     title: "이미지 크기 조절",
     shortLabel: "리사이즈",
     description:
-      "썸네일, 상세 이미지, 문서 첨부용 규격에 맞게 픽셀 크기를 조절하는 이미지 크기 조절 도구입니다.",
+      "썸네일, 상세 이미지, 문서 첨부 규격에 맞춰 픽셀 크기를 조절하는 리사이즈 도구입니다.",
     metadataDescription:
-      "브라우저 안에서 JPG, PNG, WebP 이미지 크기를 조정하고 결과를 개별 저장 또는 ZIP으로 내려받는 리사이즈 도구 페이지입니다.",
+      "브라우저에서 JPEG, PNG, WebP 이미지 해상도를 조정하고 결과를 개별 저장하거나 ZIP으로 내려받는 이미지 리사이즈 도구 페이지입니다.",
     intro:
       "가로·세로 입력, 비율 유지, 자주 쓰는 프리셋으로 여러 장의 해상도를 같은 기준에 맞출 수 있습니다.",
     highlights: [
@@ -147,9 +147,9 @@ export const toolRoutes = [
     title: "이미지 포맷 변환",
     shortLabel: "변환",
     description:
-      "JPG, PNG, WebP 사이를 바꿔 업로드 호환성과 용량 기준을 맞추는 이미지 포맷 변환 도구입니다.",
+      "JPEG, PNG, WebP 사이를 바꿔 업로드 호환성과 용량 기준을 맞추는 포맷 변환 도구입니다.",
     metadataDescription:
-      "브라우저 안에서 JPG, PNG, WebP 사이를 변환하고 결과를 개별 저장 또는 ZIP으로 내려받는 포맷 변환 도구 페이지입니다.",
+      "브라우저에서 JPEG, PNG, WebP 이미지를 다른 형식으로 변환하고 결과를 개별 저장하거나 ZIP으로 내려받는 이미지 포맷 변환 도구 페이지입니다.",
     intro:
       "사진, 로고, 캡처에 맞는 형식으로 여러 장을 한 번에 바꾸고 품질과 저장 형식을 바로 확인할 수 있습니다.",
     highlights: [
@@ -170,9 +170,9 @@ export const toolRoutes = [
     title: "EXIF 제거",
     shortLabel: "EXIF 제거",
     description:
-      "사진을 공유하기 전에 위치, 기기, 촬영 시각 같은 메타데이터를 정리하는 EXIF 제거 도구입니다.",
+      "사진 공유 전에 위치, 기기, 촬영 시각 같은 EXIF 메타데이터를 정리하는 도구입니다.",
     metadataDescription:
-      "브라우저 안에서 사진 EXIF 메타데이터를 정리하고 결과를 개별 저장 또는 ZIP으로 내려받는 개인정보 보호 도구 페이지입니다.",
+      "브라우저에서 사진 EXIF 메타데이터를 재저장 방식으로 정리하고 결과를 개별 저장하거나 ZIP으로 내려받는 EXIF 제거 도구 페이지입니다.",
     intro:
       "공개 게시물, 중고거래, 제보용 첨부처럼 메타데이터가 신경 쓰이는 상황에서 여러 장을 한 번에 다시 저장할 수 있습니다.",
     highlights: [

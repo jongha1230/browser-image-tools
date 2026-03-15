@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/jongha1230/browser-image-tools/actions/workflows/ci.yml/badge.svg)](https://github.com/jongha1230/browser-image-tools/actions/workflows/ci.yml)
 
-브라우저 안에서 이미지 압축, 크기 조절, 포맷 변환, EXIF 정리, 배치 내보내기를 끝내는 한국어 중심 이미지 유틸리티 사이트입니다. 이 저장소는 실제 제품 형태를 염두에 둔 프론트엔드 포트폴리오 프로젝트이며, 파일 처리와 다운로드 준비를 모두 브라우저 안에서 끝내는 흐름을 구현합니다.
+브라우저에서 이미지 압축, 리사이즈, 포맷 변환, EXIF 제거, 배치 내보내기를 처리하는 로컬 이미지 도구 사이트입니다. 이 저장소는 업로드 전 정리 작업에 집중한 프론트엔드 프로젝트이며, 파일 처리와 다운로드 준비를 모두 브라우저 안에서 끝내는 흐름을 구현합니다.
 
 ## 공개 데모
 

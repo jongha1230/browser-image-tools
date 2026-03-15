@@ -21,11 +21,11 @@ type PageMetadataInput = PageMetadataEntry & {
 };
 
 const defaultKeywords = [
-  "이미지 도구",
-  "브라우저 처리",
   "이미지 압축",
-  "이미지 변환",
+  "이미지 리사이즈",
+  "이미지 포맷 변환",
   "EXIF 제거",
+  "브라우저 로컬 처리",
 ] as const;
 
 const toolPageMetadataEntries = Object.fromEntries(
@@ -50,34 +50,34 @@ const guidePageMetadataEntries = Object.fromEntries(
 
 export const pageMetadataCatalog: Record<SitePath, PageMetadataEntry> = {
   "/": {
-    title: "브라우저 이미지 작업 도구",
+    title: "이미지 압축, 리사이즈, 포맷 변환, EXIF 제거",
     description:
-      "브라우저 안에서 이미지 압축, 크기 조절, 포맷 변환, EXIF 제거와 배치 내보내기를 처리하는 한국어 이미지 작업 도구 홈입니다.",
+      "업로드 전에 이미지 압축, 크기 조절, 포맷 변환, EXIF 제거를 브라우저에서 처리하고 결과를 개별 저장하거나 ZIP으로 내려받는 로컬 이미지 도구 홈입니다.",
   },
   "/tools": {
-    title: "이미지 도구 모음",
+    title: "이미지 압축, 리사이즈, 변환, EXIF 제거 도구",
     description:
-      "이미지 압축, 크기 조절, 포맷 변환, EXIF 제거 도구를 작업별로 바로 고를 수 있게 모아 둔 페이지입니다.",
+      "이미지 압축, 크기 조절, 포맷 변환, EXIF 제거 도구를 작업별로 고르고 브라우저에서 바로 처리할 수 있는 도구 허브입니다.",
   },
   "/guides": {
-    title: "이미지 작업 가이드",
+    title: "이미지 압축, 리사이즈, 변환 가이드",
     description:
-      "이미지 최적화, 포맷 선택, EXIF 정리, 배치 리사이즈 기준을 다루는 한국어 가이드 모음 페이지입니다.",
+      "이미지 압축 기준, 리사이즈 순서, 포맷 선택, EXIF 제거 판단을 정리한 실전 가이드 모음입니다.",
   },
   "/about": {
-    title: "서비스 소개",
+    title: "브라우저 이미지 툴 소개",
     description:
-      "브라우저 안에서 처리하는 방식, 현재 지원 범위, 서비스 운영 원칙을 소개하는 페이지입니다.",
+      "이미지 압축, 리사이즈, 포맷 변환, EXIF 제거 도구를 왜 브라우저 로컬 처리로 제공하는지와 현재 지원 범위를 설명합니다.",
   },
   "/privacy": {
-    title: "개인정보와 로컬 처리 안내",
+    title: "이미지 로컬 처리와 개인정보 안내",
     description:
-      "이미지 파일을 브라우저 안에서 처리하는 방식과 광고·쿠키 고지의 현재 상태를 설명하는 페이지입니다.",
+      "이미지 파일이 서버 업로드 없이 브라우저 안에서 처리되는 방식과 데이터 보관 범위를 설명하는 페이지입니다.",
   },
   "/contact": {
-    title: "문의 안내",
+    title: "브라우저 이미지 툴 문의",
     description:
-      "버그 제보와 지원 범위 문의를 남길 때 확인하면 좋은 정보와 현재 연락 방식을 정리한 페이지입니다.",
+      "이미지 압축, 리사이즈, 포맷 변환, EXIF 제거 도구 사용 중 생긴 문제를 제보할 때 필요한 정보와 연락 방식을 안내합니다.",
   },
   ...toolPageMetadataEntries,
   ...guidePageMetadataEntries,

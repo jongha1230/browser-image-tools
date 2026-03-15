@@ -12,17 +12,17 @@ export const metadata: Metadata = createPageMetadata(
 export default function ToolsPage() {
   return (
     <PageLayout breadcrumbs={[{ href: "/", label: "홈" }, { label: "도구" }]}>
-      <PageHero eyebrow="도구 모음" title="필요한 작업만 골라 바로 처리하는 이미지 도구">
+      <PageHero eyebrow="이미지 도구 허브" title="압축, 리사이즈, 포맷 변환, EXIF 제거 도구 모음">
         <p>
-          압축, 크기 조절, 형식 변환, EXIF 제거를 각각 독립 페이지로 제공해
-          필요한 작업만 바로 열 수 있습니다. 모든 처리와 저장 준비는 현재
+          이미지 압축, 크기 조절, 포맷 변환, EXIF 제거를 작업별로 분리해
+          필요한 도구만 바로 열 수 있습니다. 모든 처리와 저장 준비는 현재
           브라우저 안에서 이뤄집니다.
         </p>
       </PageHero>
 
       <PageSection
         title="현재 제공 중인 도구"
-        intro={<p>어떤 작업이 필요한지 먼저 고르고, 각 페이지에서 바로 실행하면 됩니다.</p>}
+        intro={<p>업로드 전에 필요한 작업을 먼저 고르고, 각 페이지에서 바로 실행하면 됩니다.</p>}
       >
         <div className="card-grid">
           {toolRoutes.map((tool) => (
