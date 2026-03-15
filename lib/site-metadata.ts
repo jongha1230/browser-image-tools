@@ -5,9 +5,9 @@ import {
   requiredRoutes,
   siteDescription,
   siteName,
-  siteOrigin,
   toolRoutes,
 } from "./site-content";
+import { getAbsoluteSiteUrl, isSiteIndexable, siteOriginUrl } from "./site-config";
 
 type SitePath = (typeof requiredRoutes)[number];
 
@@ -95,21 +95,22 @@ export function createPageMetadata({
   title,
   description,
 }: PageMetadataInput): Metadata {
-  const url = new URL(path, siteOrigin);
+  const canonicalUrl = getAbsoluteSiteUrl(path);
+  const fullTitle = `${title} | ${siteName}`;
 
   return {
-    title,
+    title: fullTitle,
     description,
     applicationName: siteName,
     category: "technology",
     keywords: [...defaultKeywords],
     alternates: {
-      canonical: path,
+      canonical: canonicalUrl,
     },
     openGraph: {
       title,
       description,
-      url,
+      url: canonicalUrl,
       siteName,
       locale: "ko_KR",
       type: "website",
@@ -119,30 +120,48 @@ export function createPageMetadata({
       title,
       description,
     },
+    robots: isSiteIndexable
+      ? {
+          index: true,
+          follow: true,
+        }
+      : {
+          index: false,
+          follow: false,
+          nocache: true,
+          googleBot: {
+            index: false,
+            follow: false,
+            noimageindex: true,
+          },
+        },
   };
 }
 
 export const rootMetadata: Metadata = {
-  metadataBase: new URL(siteOrigin),
-  title: {
-    default: siteName,
-    template: `%s | ${siteName}`,
-  },
+  metadataBase: siteOriginUrl,
+  title: siteName,
   description: siteDescription,
   applicationName: siteName,
   category: "technology",
   keywords: [...defaultKeywords],
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    shortcut: ["/icon.svg"],
+    shortcut: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/apple-icon", sizes: "180x180", type: "image/png" }],
   },
   alternates: {
-    canonical: "/",
+    canonical: getAbsoluteSiteUrl("/"),
+    types: isSiteIndexable
+      ? {
+          "application/rss+xml": getAbsoluteSiteUrl("/rss.xml"),
+        }
+      : undefined,
   },
   openGraph: {
     title: siteName,
     description: siteDescription,
-    url: siteOrigin,
+    url: getAbsoluteSiteUrl("/"),
     siteName,
     locale: "ko_KR",
     type: "website",
@@ -152,4 +171,19 @@ export const rootMetadata: Metadata = {
     title: siteName,
     description: siteDescription,
   },
+  robots: isSiteIndexable
+    ? {
+        index: true,
+        follow: true,
+      }
+    : {
+        index: false,
+        follow: false,
+        nocache: true,
+        googleBot: {
+          index: false,
+          follow: false,
+          noimageindex: true,
+        },
+      },
 };

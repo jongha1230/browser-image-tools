@@ -1,4 +1,5 @@
-import { guideRoutes, siteDescription, siteName, siteOrigin, siteUpdatedAt } from "@/lib/site-content";
+import { guideRoutes, siteDescription, siteName, siteUpdatedAt } from "@/lib/site-content";
+import { getAbsoluteSiteUrl, isSiteIndexable } from "@/lib/site-config";
 
 function escapeXml(value: string) {
   return value
@@ -10,8 +11,8 @@ function escapeXml(value: string) {
 }
 
 export async function GET() {
-  const feedUrl = `${siteOrigin}/rss.xml`;
-  const siteUrl = `${siteOrigin}/guides`;
+  const feedUrl = getAbsoluteSiteUrl("/rss.xml");
+  const siteUrl = getAbsoluteSiteUrl("/guides");
   const latestUpdate = new Date(siteUpdatedAt).toUTCString();
   const items = guideRoutes
     .map(
@@ -19,8 +20,8 @@ export async function GET() {
         <item>
           <title>${escapeXml(guide.title)}</title>
           <description>${escapeXml(guide.description)}</description>
-          <link>${siteOrigin}${guide.href}</link>
-          <guid>${siteOrigin}${guide.href}</guid>
+          <link>${getAbsoluteSiteUrl(guide.href)}</link>
+          <guid>${getAbsoluteSiteUrl(guide.href)}</guid>
           <pubDate>${new Date(guide.publishedAt).toUTCString()}</pubDate>
         </item>`,
     )
@@ -43,6 +44,7 @@ export async function GET() {
     headers: {
       "content-type": "application/rss+xml; charset=utf-8",
       "cache-control": "public, max-age=0, must-revalidate",
+      ...(isSiteIndexable ? {} : { "x-robots-tag": "noindex, nofollow" }),
     },
   });
 }

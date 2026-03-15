@@ -1,0 +1,126 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const baseEnv = { ...process.env };
+
+async function loadSiteModules(env: Record<string, string | undefined>) {
+  vi.resetModules();
+  process.env = {
+    ...baseEnv,
+    ...env,
+  };
+
+  const [siteConfig, siteMetadata, robotsModule, sitemapModule, rssModule] =
+    await Promise.all([
+      import("../lib/site-config"),
+      import("../lib/site-metadata"),
+      import("../app/robots"),
+      import("../app/sitemap"),
+      import("../app/rss.xml/route"),
+    ]);
+
+  return {
+    robots: robotsModule.default,
+    rss: rssModule.GET,
+    siteConfig,
+    siteMetadata,
+    sitemap: sitemapModule.default,
+  };
+}
+
+afterEach(() => {
+  vi.resetModules();
+  process.env = { ...baseEnv };
+});
+
+describe("site configuration", () => {
+  it("uses an explicitly configured canonical origin across shared metadata routes", async () => {
+    const { robots, rss, siteConfig, siteMetadata, sitemap } =
+      await loadSiteModules({
+        NEXT_PUBLIC_SITE_URL: "https://images.example.com/launch/?from=checklist",
+        SITE_URL: undefined,
+      });
+
+    expect(siteConfig.siteOrigin).toBe("https://images.example.com");
+    expect(siteConfig.hasConfiguredSiteOrigin).toBe(true);
+    expect(siteConfig.isSiteIndexable).toBe(true);
+    expect(siteMetadata.rootMetadata.metadataBase?.toString()).toBe(
+      "https://images.example.com/",
+    );
+    expect(siteMetadata.rootMetadata.alternates).toEqual({
+      canonical: "https://images.example.com/",
+      types: {
+        "application/rss+xml": "https://images.example.com/rss.xml",
+      },
+    });
+
+    const robotsEntry = robots();
+
+    expect(robotsEntry.sitemap).toEqual(["https://images.example.com/sitemap.xml"]);
+    expect(robotsEntry.host).toBe("images.example.com");
+
+    const sitemapEntries = sitemap();
+
+    expect(sitemapEntries[0]?.url).toBe("https://images.example.com/");
+    expect(sitemapEntries[1]?.url).toBe("https://images.example.com/tools");
+
+    const rssResponse = await rss();
+    const rssXml = await rssResponse.text();
+
+    expect(rssResponse.headers.get("x-robots-tag")).toBeNull();
+    expect(rssXml).toContain("<link>https://images.example.com/guides</link>");
+    expect(rssXml).toContain(
+      "<atom:link href=\"https://images.example.com/rss.xml\" rel=\"self\" type=\"application/rss+xml\" />",
+    );
+  });
+
+  it("falls back to a safe noindex mode when no canonical site origin is configured", async () => {
+    const { robots, rss, siteConfig, siteMetadata, sitemap } =
+      await loadSiteModules({
+        NEXT_PUBLIC_SITE_URL: "",
+        SITE_URL: "",
+      });
+
+    expect(siteConfig.siteOrigin).toBe("https://browser-image-tools.example");
+    expect(siteConfig.hasConfiguredSiteOrigin).toBe(false);
+    expect(siteConfig.isSiteIndexable).toBe(false);
+    expect(siteConfig.siteIndexingBlockReason).toBe("missing-site-url");
+    expect(siteMetadata.rootMetadata.robots).toMatchObject({
+      index: false,
+      follow: false,
+    });
+
+    expect(robots()).toEqual({
+      rules: [
+        {
+          userAgent: "*",
+          disallow: "/",
+        },
+      ],
+    });
+    expect(sitemap()).toEqual([]);
+
+    const rssResponse = await rss();
+
+    expect(rssResponse.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+  });
+
+  it("keeps the default vercel hostname out of the index until a custom domain is configured", async () => {
+    const { robots, siteConfig } = await loadSiteModules({
+      NEXT_PUBLIC_SITE_URL: "https://browser-image-tools.vercel.app",
+      SITE_URL: undefined,
+    });
+
+    expect(siteConfig.hasConfiguredSiteOrigin).toBe(true);
+    expect(siteConfig.usesVercelDefaultHostname).toBe(true);
+    expect(siteConfig.isSiteIndexable).toBe(false);
+    expect(siteConfig.siteIndexingBlockReason).toBe("vercel-hostname");
+    expect(robots()).toEqual({
+      rules: [
+        {
+          userAgent: "*",
+          disallow: "/",
+        },
+      ],
+    });
+  });
+});
