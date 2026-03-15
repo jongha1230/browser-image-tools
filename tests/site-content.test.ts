@@ -89,12 +89,10 @@ describe("site content scaffold", () => {
     expect(new Set(entries.map((entry) => entry.description)).size).toBe(entries.length);
   });
 
-  it("builds canonical and OG defaults from route metadata", () => {
+  it("omits canonical URLs until a real production origin is configured", () => {
     const metadata = createPageMetadata(getPageMetadataEntry("/tools"));
 
-    expect(metadata.alternates).toEqual({
-      canonical: "https://browser-image-tools.example/tools",
-    });
+    expect(metadata.alternates).toBeUndefined();
     expect(metadata.openGraph).toMatchObject({
       title: "이미지 도구 모음",
       description:
@@ -103,9 +101,7 @@ describe("site content scaffold", () => {
       siteName: "브라우저 이미지 툴",
       type: "website",
     });
-    expect(metadata.openGraph?.url?.toString()).toBe(
-      "https://browser-image-tools.example/tools",
-    );
+    expect(metadata.openGraph?.url).toBeUndefined();
     expect(metadata.robots).toMatchObject({
       index: false,
       follow: false,

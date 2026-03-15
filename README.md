@@ -65,6 +65,14 @@ npm run dev
 - `npm run build`: 프로덕션 빌드
 - `npm run start`: 프로덕션 서버 실행
 
+## Vercel 배포 메모
+
+- 최종 운영 도메인이 정해지기 전에는 `SITE_URL`과 `NEXT_PUBLIC_SITE_URL`을 비워 두는 편이 안전합니다.
+- 이 상태에서는 사이트가 `noindex`로 동작하고, `robots.txt`는 전체 차단, `sitemap.xml`은 빈 목록, `rss.xml`은 `404`로 응답합니다.
+- 최종 도메인을 연결한 뒤에는 Production 환경 변수 `SITE_URL`과 `NEXT_PUBLIC_SITE_URL`을 같은 `https://` 원본으로 설정해야 합니다.
+- 운영 도메인 연결 이후에는 기본 `vercel.app` 호스트나 보조 도메인 접근이 정식 캐노니컬 호스트로 리디렉션되도록 준비되어 있습니다.
+- 자세한 운영 절차는 [Vercel launch guide](./docs/vercel-launch.md)를 확인하면 됩니다.
+
 ## 현재 한계
 
 - 지원 형식은 JPEG, PNG, WebP에 한정됩니다.
@@ -84,3 +92,4 @@ npm run dev
 
 - [제품 범위](./docs/product-scope.md)
 - [라우트 맵](./docs/route-map.md)
+- [Vercel launch guide](./docs/vercel-launch.md)

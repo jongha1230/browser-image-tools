@@ -7,7 +7,7 @@ import {
   siteName,
   toolRoutes,
 } from "./site-content";
-import { getAbsoluteSiteUrl, isSiteIndexable, siteOriginUrl } from "./site-config";
+import { getIndexableSiteUrl, isSiteIndexable, siteOriginUrl } from "./site-config";
 
 type SitePath = (typeof requiredRoutes)[number];
 
@@ -95,7 +95,7 @@ export function createPageMetadata({
   title,
   description,
 }: PageMetadataInput): Metadata {
-  const canonicalUrl = getAbsoluteSiteUrl(path);
+  const canonicalUrl = getIndexableSiteUrl(path);
   const fullTitle = `${title} | ${siteName}`;
 
   return {
@@ -104,16 +104,18 @@ export function createPageMetadata({
     applicationName: siteName,
     category: "technology",
     keywords: [...defaultKeywords],
-    alternates: {
-      canonical: canonicalUrl,
-    },
+    alternates: canonicalUrl
+      ? {
+          canonical: canonicalUrl,
+        }
+      : undefined,
     openGraph: {
       title,
       description,
-      url: canonicalUrl,
       siteName,
       locale: "ko_KR",
       type: "website",
+      ...(canonicalUrl ? { url: canonicalUrl } : {}),
     },
     twitter: {
       card: "summary_large_image",
@@ -138,8 +140,11 @@ export function createPageMetadata({
   };
 }
 
+const rootCanonicalUrl = getIndexableSiteUrl("/");
+const rootRssUrl = getIndexableSiteUrl("/rss.xml");
+
 export const rootMetadata: Metadata = {
-  metadataBase: siteOriginUrl,
+  metadataBase: isSiteIndexable ? siteOriginUrl : undefined,
   title: siteName,
   description: siteDescription,
   applicationName: siteName,
@@ -150,21 +155,26 @@ export const rootMetadata: Metadata = {
     shortcut: [{ url: "/icon.svg", type: "image/svg+xml" }],
     apple: [{ url: "/apple-icon", sizes: "180x180", type: "image/png" }],
   },
-  alternates: {
-    canonical: getAbsoluteSiteUrl("/"),
-    types: isSiteIndexable
+  alternates:
+    rootCanonicalUrl || rootRssUrl
       ? {
-          "application/rss+xml": getAbsoluteSiteUrl("/rss.xml"),
+          ...(rootCanonicalUrl ? { canonical: rootCanonicalUrl } : {}),
+          ...(rootRssUrl
+            ? {
+                types: {
+                  "application/rss+xml": rootRssUrl,
+                },
+              }
+            : {}),
         }
       : undefined,
-  },
   openGraph: {
     title: siteName,
     description: siteDescription,
-    url: getAbsoluteSiteUrl("/"),
     siteName,
     locale: "ko_KR",
     type: "website",
+    ...(rootCanonicalUrl ? { url: rootCanonicalUrl } : {}),
   },
   twitter: {
     card: "summary_large_image",
