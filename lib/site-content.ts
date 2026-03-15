@@ -1,14 +1,29 @@
-export type ToolRoute = {
-  slug: "compress-image" | "resize-image" | "convert-image" | "remove-exif";
-  href: `/tools/${string}`;
+export const siteOrigin = "https://browser-image-tools.example";
+
+export type ToolSlug =
+  | "compress-image"
+  | "resize-image"
+  | "convert-image"
+  | "remove-exif";
+
+type ToolRouteBase<TSlug extends ToolSlug> = {
+  slug: TSlug;
+  href: `/tools/${TSlug}`;
   title: string;
   shortLabel: string;
   description: string;
+  metadataDescription: string;
   intro: string;
   highlights: string[];
   checklist: string[];
   shellActionLabel: string;
 };
+
+export type ToolRoute =
+  | ToolRouteBase<"compress-image">
+  | ToolRouteBase<"resize-image">
+  | ToolRouteBase<"convert-image">
+  | ToolRouteBase<"remove-exif">;
 
 export const siteName = "브라우저 이미지 툴";
 export const siteTagline = "한국어 중심, 광고 기반, 브라우저 내 이미지 유틸리티";
@@ -23,7 +38,13 @@ export const primaryNav = [
   { href: "/contact", label: "문의" },
 ] as const;
 
-export const toolRoutes: ToolRoute[] = [
+export const footerNav = [
+  { href: "/about", label: "소개" },
+  { href: "/privacy", label: "개인정보" },
+  { href: "/contact", label: "문의" },
+] as const;
+
+export const toolRoutes = [
   {
     slug: "compress-image",
     href: "/tools/compress-image",
@@ -31,6 +52,8 @@ export const toolRoutes: ToolRoute[] = [
     shortLabel: "압축",
     description:
       "업로드 전 이미지 용량을 줄여 전송 속도와 저장 효율을 개선하는 로컬 브라우저 압축 도구입니다.",
+    metadataDescription:
+      "브라우저에서 JPG, PNG, WebP 이미지 용량을 로컬로 줄이는 이미지 압축 도구 안내 페이지입니다.",
     intro:
       "블로그, 커뮤니티, 쇼핑몰 업로드 전에 JPG, PNG, WebP 파일 크기를 빠르게 낮추는 흐름을 염두에 둔 페이지입니다.",
     highlights: [
@@ -52,6 +75,8 @@ export const toolRoutes: ToolRoute[] = [
     shortLabel: "리사이즈",
     description:
       "썸네일, 상세 페이지, 문서 첨부용으로 픽셀 크기를 조정하는 로컬 브라우저 리사이즈 도구입니다.",
+    metadataDescription:
+      "브라우저에서 이미지 픽셀 크기와 비율을 로컬로 조정하는 리사이즈 도구 안내 페이지입니다.",
     intro:
       "정해진 비율 유지, 긴 변 기준 입력, 여러 출력 크기 프리셋을 담을 수 있도록 레이아웃을 준비했습니다.",
     highlights: [
@@ -73,6 +98,8 @@ export const toolRoutes: ToolRoute[] = [
     shortLabel: "변환",
     description:
       "JPG, PNG, WebP 사이를 브라우저에서 상호 변환하는 로컬 포맷 변환 도구입니다.",
+    metadataDescription:
+      "브라우저에서 JPG, PNG, WebP 사이를 로컬로 변환하는 포맷 변환 도구 안내 페이지입니다.",
     intro:
       "호환성, 투명도 유지 여부, 압축 옵션을 설명하는 서버 렌더링 콘텐츠를 먼저 배치한 스캐폴드입니다.",
     highlights: [
@@ -94,6 +121,8 @@ export const toolRoutes: ToolRoute[] = [
     shortLabel: "EXIF 제거",
     description:
       "사진 메타데이터를 로컬 브라우저에서 제거해 공유 전 개인정보 노출을 줄이는 도구입니다.",
+    metadataDescription:
+      "브라우저에서 사진 EXIF 메타데이터를 로컬로 제거하는 개인정보 보호 도구 안내 페이지입니다.",
     intro:
       "촬영 위치, 기기 정보, 날짜 정보 같은 메타데이터를 제거하는 프라이버시 중심 흐름을 위한 페이지입니다.",
     highlights: [
@@ -108,7 +137,7 @@ export const toolRoutes: ToolRoute[] = [
     ],
     shellActionLabel: "EXIF 제거 예정",
   },
-];
+] satisfies ToolRoute[];
 
 export const requiredRoutes = [
   "/",
@@ -130,15 +159,14 @@ export const guideTopics = [
   "메타데이터 제거가 필요한 공유 상황 정리",
 ] as const;
 
-export function getToolRoute(
-  slug: ToolRoute["slug"],
-): ToolRoute {
+export function getToolRoute<TSlug extends ToolSlug>(
+  slug: TSlug,
+): Extract<ToolRoute, { slug: TSlug }> {
   const tool = toolRoutes.find((entry) => entry.slug === slug);
 
   if (!tool) {
     throw new Error(`Unknown tool route: ${slug}`);
   }
 
-  return tool;
+  return tool as Extract<ToolRoute, { slug: TSlug }>;
 }
-
