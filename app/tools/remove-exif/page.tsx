@@ -8,6 +8,7 @@ import { createPageMetadata, getPageMetadataEntry } from "@/lib/site-metadata";
 
 const tool = getToolRoute("remove-exif");
 const relatedGuides = getGuidesForTool(tool.slug).slice(0, 2);
+const workspaceId = "remove-exif-workspace";
 
 export const metadata: Metadata = createPageMetadata(
   getPageMetadataEntry(tool.href),
@@ -23,22 +24,29 @@ export default function RemoveExifPage() {
       ]}
     >
       <PageHero eyebrow="Remove EXIF" title={tool.title}>
-        <p>{tool.description}</p>
-        <p>{tool.intro}</p>
         <p>
-          이 페이지에서는 여러 이미지를 브라우저 안에서 같은 형식으로 다시
-          저장해 GPS 위치, 기기 모델, 촬영 시각 같은 메타데이터 노출 가능성을
-          줄이고 성공한 결과를 ZIP으로 한 번에 다운로드할 수 있습니다.
+          {tool.description} {tool.intro} 여러 이미지를 브라우저 안에서 같은
+          형식으로 다시 저장해 GPS 위치, 기기 모델, 촬영 시각 같은 메타데이터
+          노출 가능성을 줄이고 성공한 결과를 ZIP으로 한 번에 다운로드할 수
+          있습니다.
         </p>
         <div className="hero__actions">
-          <Link className="button-link" href="/tools">
-            도구 허브로 돌아가기
-          </Link>
+          <a className="button-link" href={`#${workspaceId}`}>
+            바로 파일 추가하기
+          </a>
           <Link className="button-muted" href="/privacy">
             로컬 처리 원칙 보기
           </Link>
         </div>
       </PageHero>
+
+      <ToolShell
+        title={tool.title}
+        description="여러 이미지를 로컬에서 같은 형식으로 다시 저장해 EXIF 메타데이터 노출 가능성을 줄이고, 성공한 결과를 개별 또는 ZIP으로 다운로드합니다."
+        primaryActionLabel="EXIF 제거하기"
+        sectionId={workspaceId}
+        variant="removeExif"
+      />
 
       <PageSection
         title="EXIF가 무엇이고 왜 확인해야 하는가"
@@ -164,13 +172,6 @@ export default function RemoveExifPage() {
           ))}
         </div>
       </PageSection>
-
-      <ToolShell
-        title={tool.title}
-        description="여러 이미지를 로컬에서 같은 형식으로 다시 저장해 EXIF 메타데이터 노출 가능성을 줄이고, 성공한 결과를 개별 또는 ZIP으로 다운로드합니다."
-        primaryActionLabel="EXIF 제거하기"
-        variant="removeExif"
-      />
     </PageLayout>
   );
 }

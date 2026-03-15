@@ -8,6 +8,7 @@ import { createPageMetadata, getPageMetadataEntry } from "@/lib/site-metadata";
 
 const tool = getToolRoute("compress-image");
 const relatedGuides = getGuidesForTool(tool.slug).slice(0, 2);
+const workspaceId = "compress-image-workspace";
 
 export const metadata: Metadata = createPageMetadata(
   getPageMetadataEntry(tool.href),
@@ -23,22 +24,28 @@ export default function CompressImagePage() {
       ]}
     >
       <PageHero eyebrow="Compress Image" title={tool.title}>
-        <p>{tool.description}</p>
-        <p>{tool.intro}</p>
         <p>
-          이 페이지에서는 여러 이미지를 브라우저 안에서 다시 인코딩해 용량을
-          줄이고, 파일별 압축 결과를 확인한 뒤 성공한 파일만 ZIP으로 한 번에
-          다운로드할 수 있습니다.
+          {tool.description} {tool.intro} 여러 이미지를 브라우저 안에서 다시
+          인코딩해 용량을 줄이고, 파일별 압축 결과를 확인한 뒤 성공한 파일만
+          ZIP으로 한 번에 다운로드할 수 있습니다.
         </p>
         <div className="hero__actions">
-          <Link className="button-link" href="/tools">
-            도구 허브로 돌아가기
-          </Link>
+          <a className="button-link" href={`#${workspaceId}`}>
+            바로 파일 추가하기
+          </a>
           <Link className="button-muted" href="/privacy">
             로컬 처리 원칙 보기
           </Link>
         </div>
       </PageHero>
+
+      <ToolShell
+        title={tool.title}
+        description="여러 이미지를 로컬에서 압축하고, 품질과 출력 형식을 조절한 뒤 성공한 결과를 개별 또는 ZIP으로 다운로드합니다."
+        primaryActionLabel="이미지 압축하기"
+        sectionId={workspaceId}
+        variant="compress"
+      />
 
       <PageSection
         title="이미지 압축이 하는 일"
@@ -127,13 +134,6 @@ export default function CompressImagePage() {
           ))}
         </div>
       </PageSection>
-
-      <ToolShell
-        title={tool.title}
-        description="여러 이미지를 로컬에서 압축하고, 품질과 출력 형식을 조절한 뒤 성공한 결과를 개별 또는 ZIP으로 다운로드합니다."
-        primaryActionLabel="이미지 압축하기"
-        variant="compress"
-      />
     </PageLayout>
   );
 }

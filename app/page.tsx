@@ -27,8 +27,8 @@ export default function HomePage() {
           <Link className="button-link" href="/tools/compress-image">
             이미지 압축 시작하기
           </Link>
-          <Link className="button-muted" href="/guides">
-            가이드 읽기
+          <Link className="button-muted" href="/tools">
+            전체 도구 보기
           </Link>
         </div>
       </PageHero>

@@ -88,6 +88,7 @@ type ToolShellProps = {
   title: string;
   description: string;
   primaryActionLabel: string;
+  sectionId?: string;
   variant?: ToolShellVariant;
 };
 
@@ -273,6 +274,7 @@ export function ToolShell({
   title,
   description,
   primaryActionLabel,
+  sectionId,
   variant = "default",
 }: ToolShellProps) {
   const shellId = useId();
@@ -366,8 +368,9 @@ export function ToolShell({
       ).length
     : 0;
   const totalSize = items.reduce((sum, item) => sum + item.file.size, 0);
+  const hasItems = items.length > 0;
   const fileCountLabel =
-    items.length > 0 ? `${items.length}개 파일 준비됨` : "아직 업로드된 파일이 없음";
+    hasItems ? `${items.length}개 파일 준비됨` : "아직 업로드된 파일이 없음";
 
   let currentOptions: ImageProcessOptions | null = null;
 
@@ -418,6 +421,24 @@ export function ToolShell({
     (!isResizeTool || Boolean(resizeValidation?.ok));
   const canDownloadZip =
     toolVariant !== null && successCount > 0 && !isProcessing && !isPreparingZip;
+  const showProgress = toolVariant !== null && (isProcessing || hasResults);
+  const dropzoneTitle = hasItems
+    ? "이미지를 더 추가하거나 현재 큐를 조정하세요"
+    : "이미지를 끌어 놓거나 파일 선택으로 여러 개 추가하세요";
+  const dropzoneHint = hasItems
+    ? `추가한 파일은 현재 큐 뒤에 이어 붙습니다. ${supportedImageTypesText} 이미지를 다시 선택하거나 클립보드 붙여넣기로 바로 더할 수 있습니다.`
+    : `지원 형식은 ${supportedImageTypesText}입니다. 붙여넣기 이미지는 이 페이지에서 바로 추가할 수 있고, 드롭 영역에 포커스한 뒤 Enter 또는 Space 로도 파일 선택 창을 열 수 있습니다.`;
+  const startChecklist = toolVariant
+    ? [
+        "JPEG, PNG, WebP 이미지를 드래그, 파일 선택, 붙여넣기로 추가",
+        `옵션을 확인한 뒤 ${primaryActionLabel}`,
+        "성공한 결과를 개별 파일 또는 ZIP으로 저장",
+      ]
+    : [
+        "JPEG, PNG, WebP 이미지를 업로드",
+        "현재 업로드 상태와 미리보기를 확인",
+        "다음 단계 옵션과 배치 내보내기 흐름으로 이어가기",
+      ];
   const dropzoneDescriptionIds =
     [
       dropzoneHintId,
@@ -1030,6 +1051,7 @@ export function ToolShell({
       aria-describedby={descriptionId}
       aria-labelledby={titleId}
       className="tool-shell"
+      id={sectionId}
     >
       <div className="tool-shell__header">
         <div>
@@ -1040,57 +1062,137 @@ export function ToolShell({
       </div>
 
       <div className="tool-shell__workspace">
-        <div
-          aria-describedby={dropzoneDescriptionIds}
-          aria-labelledby={dropzoneTitleId}
-          className="tool-shell__dropzone"
-          data-dragging={isDragging}
-          onKeyDown={handleDropzoneKeyDown}
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          role="group"
-          tabIndex={isProcessing ? -1 : 0}
-        >
-          <input
-            ref={inputRef}
-            accept={supportedImageAccept}
+        <div className="tool-shell__primary-grid">
+          <div
             aria-describedby={dropzoneDescriptionIds}
-            aria-label="이미지 파일 선택"
-            className="visually-hidden"
-            disabled={isProcessing}
-            multiple
-            onChange={handleInputChange}
-            type="file"
-          />
-          <strong id={dropzoneTitleId}>
-            이미지를 끌어 놓거나 파일 선택으로 여러 개 추가하세요
-          </strong>
-          <p id={dropzoneHintId}>
-            지원 형식은 {supportedImageTypesText}입니다. 붙여넣기 이미지는 이
-            페이지에서 <kbd>Ctrl</kbd> + <kbd>V</kbd> 로 바로 추가할 수 있고,
-            드롭 영역에 포커스한 뒤 <kbd>Enter</kbd> 또는 <kbd>Space</kbd> 로도
-            파일 선택 창을 열 수 있습니다.
-          </p>
-          <div className="tool-shell__drop-actions">
-            <button className="button-link" onClick={openFilePicker} type="button">
-              파일 선택
-            </button>
-            <button
-              className="button-muted"
-              disabled={items.length === 0 || isProcessing}
-              onClick={clearItems}
-              type="button"
-            >
-              업로드 목록 비우기
-            </button>
+            aria-labelledby={dropzoneTitleId}
+            className="tool-shell__dropzone"
+            data-dragging={isDragging}
+            onKeyDown={handleDropzoneKeyDown}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            role="group"
+            tabIndex={isProcessing ? -1 : 0}
+          >
+            <input
+              ref={inputRef}
+              accept={supportedImageAccept}
+              aria-describedby={dropzoneDescriptionIds}
+              aria-label="이미지 파일 선택"
+              className="visually-hidden"
+              disabled={isProcessing}
+              multiple
+              onChange={handleInputChange}
+              type="file"
+            />
+            <strong id={dropzoneTitleId}>{dropzoneTitle}</strong>
+            <p id={dropzoneHintId}>
+              {dropzoneHint}
+              <span className="visually-hidden">
+                키보드 사용 시 Ctrl + V, Enter, Space를 지원합니다.
+              </span>
+            </p>
+            <div className="tool-shell__drop-actions">
+              <button className="button-link" onClick={openFilePicker} type="button">
+                파일 선택
+              </button>
+              {hasItems ? (
+                <button
+                  className="button-muted"
+                  disabled={isProcessing}
+                  onClick={clearItems}
+                  type="button"
+                >
+                  업로드 목록 비우기
+                </button>
+              ) : null}
+            </div>
+            <ul className="tool-shell__drop-highlights">
+              <li>브라우저 안에서만 파일 보관 및 처리</li>
+              <li>JPEG, PNG, WebP 파일만 허용</li>
+              <li>{getDropzoneCopy(variant, keepAspectRatio, skippedConvertCount)}</li>
+            </ul>
           </div>
-          <ul className="chip-list">
-            <li>브라우저 안에서만 파일 보관 및 처리</li>
-            <li>JPEG, PNG, WebP 파일만 허용</li>
-            <li>{getDropzoneCopy(variant, keepAspectRatio, skippedConvertCount)}</li>
-          </ul>
+
+          <aside className="card tool-shell__overview-card">
+            <h3>{hasItems ? "현재 큐 요약" : "빠른 시작"}</h3>
+
+            {hasItems ? (
+              <>
+                <div className="tool-shell__step-list" aria-label="작업 흐름">
+                  {Object.entries(stepLabels).map(([key, label]) => {
+                    const stepKey = key as StepKey;
+
+                    return (
+                      <button
+                        aria-controls={stepStatusId}
+                        aria-pressed={activeStep === stepKey}
+                        key={stepKey}
+                        className="tool-shell__step"
+                        data-active={activeStep === stepKey}
+                        onClick={() => setActiveStep(stepKey)}
+                        type="button"
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div
+                  aria-atomic="true"
+                  aria-live="polite"
+                  className="tool-shell__status"
+                  id={stepStatusId}
+                  role="status"
+                >
+                  <strong>{stepLabels[activeStep]}</strong>
+                  <p>{statusByStep[activeStep]}</p>
+                </div>
+                <dl className="tool-shell__stat-list tool-shell__stat-list--compact">
+                  <div>
+                    <dt>준비 파일</dt>
+                    <dd>{items.length}개</dd>
+                  </div>
+                  <div>
+                    <dt>총 업로드 용량</dt>
+                    <dd>{formatFileSize(totalSize)}</dd>
+                  </div>
+                  <div>
+                    <dt>최근 추가 방법</dt>
+                    <dd>{lastSource ? sourceLabels[lastSource] : "아직 없음"}</dd>
+                  </div>
+                  <div>
+                    <dt>성공 / 실패</dt>
+                    <dd>{`${successCount}개 / ${errorCount}개`}</dd>
+                  </div>
+                  <div>
+                    <dt>처리 엔진</dt>
+                    <dd>{getEngineLabel(processingEngine)}</dd>
+                  </div>
+                </dl>
+              </>
+            ) : (
+              <>
+                <ol className="tool-shell__start-list">
+                  {startChecklist.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ol>
+                <div
+                  aria-atomic="true"
+                  aria-live="polite"
+                  className="tool-shell__status"
+                  id={stepStatusId}
+                  role="status"
+                >
+                  <strong>{stepLabels.upload}</strong>
+                  <p>{statusByStep.upload}</p>
+                </div>
+              </>
+            )}
+          </aside>
         </div>
 
         {errors.length > 0 ? (
@@ -1139,200 +1241,6 @@ export function ToolShell({
             <p>{processingNote}</p>
           </div>
         ) : null}
-
-        <div className="detail-grid tool-shell__summary-grid">
-          <div className="card">
-            <h3>현재 상태</h3>
-            <p>{fileCountLabel}</p>
-          </div>
-          <div className="card">
-            <h3>총 업로드 용량</h3>
-            <p>{items.length > 0 ? formatFileSize(totalSize) : "0 B"}</p>
-          </div>
-          <div className="card">
-            <h3>최근 추가 방법</h3>
-            <p>{lastSource ? sourceLabels[lastSource] : "아직 없음"}</p>
-          </div>
-          <div className="card">
-            <h3>성공 / 실패</h3>
-            <p>
-              {items.length > 0
-                ? `${successCount}개 성공 · ${errorCount}개 실패`
-                : "실행 전"}
-            </p>
-          </div>
-          <div className="card">
-            <h3>처리 엔진</h3>
-            <p>{getEngineLabel(processingEngine)}</p>
-          </div>
-        </div>
-
-        {toolVariant ? (
-          <div className="tool-shell__progress">
-            <div className="tool-shell__progress-header">
-              <strong id={progressLabelId}>배치 진행률</strong>
-              <span>
-                {items.length > 0
-                  ? `${completedCount}/${items.length} 완료`
-                  : "실행 대기"}
-              </span>
-            </div>
-            <div
-              aria-describedby={progressHintId}
-              aria-labelledby={progressLabelId}
-              aria-valuemax={Math.max(items.length, 1)}
-              aria-valuemin={0}
-              aria-valuenow={items.length > 0 ? completedCount : 0}
-              aria-valuetext={progressValueText}
-              className="tool-shell__progress-bar"
-              role="progressbar"
-            >
-              <span style={{ width: `${progressPercent}%` }} />
-            </div>
-            <p className="tool-shell__helper" id={progressHintId}>
-              {processingCount > 0
-                ? `${processingCount}개 파일을 현재 처리 중입니다. 성공한 파일만 ZIP에 묶어 다운로드할 수 있습니다.`
-                : hasResults
-                  ? `부분 실패가 있어도 성공한 파일은 바로 개별 다운로드하거나 ZIP으로 한 번에 받을 수 있습니다.`
-                  : `배치 실행 전에는 파일별 상태가 대기 중으로 유지됩니다.`}
-            </p>
-          </div>
-        ) : null}
-
-        {items.length > 0 ? (
-          <div className="detail-grid tool-shell__preview-grid">
-            {items.map((item) => {
-              const itemState = queueState[item.id] ?? { status: "queued" };
-              const itemMimeType =
-                getSupportedImageMimeType(item.file) ?? "image/jpeg";
-
-              return (
-                <article className="card tool-shell__preview-card" key={item.id}>
-                  <div className="tool-shell__preview-media">
-                    <Image
-                      alt={`${item.file.name} 미리보기`}
-                      fill
-                      sizes="(min-width: 900px) 30vw, (min-width: 640px) 45vw, 100vw"
-                      src={item.previewUrl}
-                      unoptimized
-                    />
-                  </div>
-                  <div className="tool-shell__preview-meta">
-                    <div className="tool-shell__preview-heading">
-                      <h3>{item.file.name}</h3>
-                      <span
-                        className="tool-shell__queue-status"
-                        data-status={itemState.status}
-                      >
-                        {getQueueStatusLabel(itemState.status)}
-                      </span>
-                    </div>
-                    <p>{item.typeLabel}</p>
-                    <p>{formatFileSize(item.file.size)}</p>
-                  </div>
-
-                  {itemState.status === "processing" ? (
-                    <p className="tool-shell__helper">
-                      현재 파일을 처리하고 있습니다. 이 단계가 끝나면 성공 또는 실패
-                      상태가 바로 업데이트됩니다.
-                    </p>
-                  ) : null}
-
-                  {itemState.status === "error" ? (
-                    <p className="tool-shell__helper tool-shell__helper--error">
-                      {itemState.errorMessage}
-                    </p>
-                  ) : null}
-
-                  {itemState.status === "success" && itemState.result ? (
-                    <dl className="tool-shell__stat-list tool-shell__queue-result">
-                      <div>
-                        <dt>저장 이름</dt>
-                        <dd>{itemState.result.fileName}</dd>
-                      </div>
-                      <div>
-                        <dt>출력 형식</dt>
-                        <dd>{getCompressionMimeTypeLabel(itemState.result.mimeType)}</dd>
-                      </div>
-                      <div>
-                        <dt>결과 크기</dt>
-                        <dd>{formatFileSize(itemState.result.blob.size)}</dd>
-                      </div>
-                      <div>
-                        <dt>해상도</dt>
-                        <dd>{formatDimensions(itemState.result)}</dd>
-                      </div>
-                      {toolVariant === "resize" ? (
-                        <div>
-                          <dt>크기 비율</dt>
-                          <dd>
-                            {formatResizeScaleSummary(
-                              {
-                                width: itemState.result.originalWidth,
-                                height: itemState.result.originalHeight,
-                              },
-                              itemState.result,
-                            )}
-                          </dd>
-                        </div>
-                      ) : (
-                        <div>
-                          <dt>용량 변화</dt>
-                          <dd>
-                            {formatCompressionSummary(
-                              item.file.size,
-                              itemState.result.blob.size,
-                            )}
-                          </dd>
-                        </div>
-                      )}
-                      {toolVariant === "removeExif" ? (
-                        <div>
-                          <dt>메타데이터</dt>
-                          <dd>EXIF 제거용 재저장</dd>
-                        </div>
-                      ) : null}
-                      {toolVariant === "convert" ? (
-                        <div>
-                          <dt>원본 형식</dt>
-                          <dd>{getCompressionMimeTypeLabel(itemMimeType)}</dd>
-                        </div>
-                      ) : null}
-                    </dl>
-                  ) : null}
-
-                  <div className="tool-shell__preview-actions">
-                    <button
-                      className="button-muted"
-                      disabled={isProcessing}
-                      onClick={() => removeItem(item.id)}
-                      type="button"
-                    >
-                      목록에서 제거
-                    </button>
-                    <button
-                      className="button-link"
-                      disabled={itemState.status !== "success"}
-                      onClick={() => handleDownloadResult(item.id)}
-                      type="button"
-                    >
-                      결과 다운로드
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="tool-shell__empty">
-            <strong>미리보기와 큐 상태는 업로드 후 여기에 표시됩니다.</strong>
-            <p>
-              아직 파일이 없습니다. {supportedImageTypesText} 이미지를 여러 개
-              추가하면 각 카드에서 원본 정보와 배치 처리 상태를 바로 확인할 수
-              있습니다.
-            </p>
-          </div>
-        )}
 
         {isCompressTool && selectedItem ? (
           <div className="detail-grid tool-shell__comparison-grid">
@@ -1713,69 +1621,193 @@ export function ToolShell({
             </section>
           </div>
         ) : null}
-      </div>
 
-      <div className="tool-shell__step-list" aria-label="작업 흐름">
-        {Object.entries(stepLabels).map(([key, label]) => {
-          const stepKey = key as StepKey;
+        {hasItems ? (
+          <div className="tool-shell__actions">
+            {toolVariant ? (
+              <>
+                <button
+                  className="button-link"
+                  disabled={!canProcess}
+                  onClick={handleProcessAll}
+                  type="button"
+                >
+                  {isProcessing ? "배치 처리 중..." : primaryActionLabel}
+                </button>
+                <button
+                  className="button-muted"
+                  disabled={!canDownloadZip}
+                  onClick={handleDownloadZip}
+                  type="button"
+                >
+                  {isPreparingZip ? "ZIP 준비 중..." : "성공 파일 ZIP 다운로드"}
+                </button>
+              </>
+            ) : (
+              <>
+                <button className="button-link" disabled type="button">
+                  {primaryActionLabel}
+                </button>
+                <button className="button-muted" disabled type="button">
+                  배치 내보내기 연결 예정
+                </button>
+              </>
+            )}
+          </div>
+        ) : null}
 
-          return (
-            <button
-              aria-controls={stepStatusId}
-              aria-pressed={activeStep === stepKey}
-              key={stepKey}
-              className="tool-shell__step"
-              data-active={activeStep === stepKey}
-              onClick={() => setActiveStep(stepKey)}
-              type="button"
+        {showProgress ? (
+          <div className="tool-shell__progress">
+            <div className="tool-shell__progress-header">
+              <strong id={progressLabelId}>배치 진행률</strong>
+              <span>{`${completedCount}/${items.length} 완료`}</span>
+            </div>
+            <div
+              aria-describedby={progressHintId}
+              aria-labelledby={progressLabelId}
+              aria-valuemax={Math.max(items.length, 1)}
+              aria-valuemin={0}
+              aria-valuenow={completedCount}
+              aria-valuetext={progressValueText}
+              className="tool-shell__progress-bar"
+              role="progressbar"
             >
-              {label}
-            </button>
-          );
-        })}
-      </div>
+              <span style={{ width: `${progressPercent}%` }} />
+            </div>
+            <p className="tool-shell__helper" id={progressHintId}>
+              {processingCount > 0
+                ? `${processingCount}개 파일을 현재 처리 중입니다. 성공한 파일만 ZIP에 묶어 다운로드할 수 있습니다.`
+                : `부분 실패가 있어도 성공한 파일은 바로 개별 다운로드하거나 ZIP으로 한 번에 받을 수 있습니다.`}
+            </p>
+          </div>
+        ) : null}
 
-      <div
-        aria-atomic="true"
-        aria-live="polite"
-        className="tool-shell__status"
-        id={stepStatusId}
-        role="status"
-      >
-        <strong>{stepLabels[activeStep]}</strong>
-        <p>{statusByStep[activeStep]}</p>
-      </div>
+        {hasItems ? (
+          <div className="detail-grid tool-shell__preview-grid">
+            {items.map((item) => {
+              const itemState = queueState[item.id] ?? { status: "queued" };
+              const itemMimeType =
+                getSupportedImageMimeType(item.file) ?? "image/jpeg";
 
-      <div className="tool-shell__actions">
-        {toolVariant ? (
-          <>
-            <button
-              className="button-link"
-              disabled={!canProcess}
-              onClick={handleProcessAll}
-              type="button"
-            >
-              {isProcessing ? "배치 처리 중..." : primaryActionLabel}
-            </button>
-            <button
-              className="button-muted"
-              disabled={!canDownloadZip}
-              onClick={handleDownloadZip}
-              type="button"
-            >
-              {isPreparingZip ? "ZIP 준비 중..." : "성공 파일 ZIP 다운로드"}
-            </button>
-          </>
-        ) : (
-          <>
-            <button className="button-link" disabled type="button">
-              {primaryActionLabel}
-            </button>
-            <button className="button-muted" disabled type="button">
-              배치 내보내기 연결 예정
-            </button>
-          </>
-        )}
+              return (
+                <article className="card tool-shell__preview-card" key={item.id}>
+                  <div className="tool-shell__preview-media">
+                    <Image
+                      alt={`${item.file.name} 미리보기`}
+                      fill
+                      sizes="(min-width: 900px) 30vw, (min-width: 640px) 45vw, 100vw"
+                      src={item.previewUrl}
+                      unoptimized
+                    />
+                  </div>
+                  <div className="tool-shell__preview-meta">
+                    <div className="tool-shell__preview-heading">
+                      <h3>{item.file.name}</h3>
+                      <span
+                        className="tool-shell__queue-status"
+                        data-status={itemState.status}
+                      >
+                        {getQueueStatusLabel(itemState.status)}
+                      </span>
+                    </div>
+                    <p>{item.typeLabel}</p>
+                    <p>{formatFileSize(item.file.size)}</p>
+                  </div>
+
+                  {itemState.status === "processing" ? (
+                    <p className="tool-shell__helper">
+                      현재 파일을 처리하고 있습니다. 이 단계가 끝나면 성공 또는 실패
+                      상태가 바로 업데이트됩니다.
+                    </p>
+                  ) : null}
+
+                  {itemState.status === "error" ? (
+                    <p className="tool-shell__helper tool-shell__helper--error">
+                      {itemState.errorMessage}
+                    </p>
+                  ) : null}
+
+                  {itemState.status === "success" && itemState.result ? (
+                    <dl className="tool-shell__stat-list tool-shell__queue-result">
+                      <div>
+                        <dt>저장 이름</dt>
+                        <dd>{itemState.result.fileName}</dd>
+                      </div>
+                      <div>
+                        <dt>출력 형식</dt>
+                        <dd>{getCompressionMimeTypeLabel(itemState.result.mimeType)}</dd>
+                      </div>
+                      <div>
+                        <dt>결과 크기</dt>
+                        <dd>{formatFileSize(itemState.result.blob.size)}</dd>
+                      </div>
+                      <div>
+                        <dt>해상도</dt>
+                        <dd>{formatDimensions(itemState.result)}</dd>
+                      </div>
+                      {toolVariant === "resize" ? (
+                        <div>
+                          <dt>크기 비율</dt>
+                          <dd>
+                            {formatResizeScaleSummary(
+                              {
+                                width: itemState.result.originalWidth,
+                                height: itemState.result.originalHeight,
+                              },
+                              itemState.result,
+                            )}
+                          </dd>
+                        </div>
+                      ) : (
+                        <div>
+                          <dt>용량 변화</dt>
+                          <dd>
+                            {formatCompressionSummary(
+                              item.file.size,
+                              itemState.result.blob.size,
+                            )}
+                          </dd>
+                        </div>
+                      )}
+                      {toolVariant === "removeExif" ? (
+                        <div>
+                          <dt>메타데이터</dt>
+                          <dd>EXIF 제거용 재저장</dd>
+                        </div>
+                      ) : null}
+                      {toolVariant === "convert" ? (
+                        <div>
+                          <dt>원본 형식</dt>
+                          <dd>{getCompressionMimeTypeLabel(itemMimeType)}</dd>
+                        </div>
+                      ) : null}
+                    </dl>
+                  ) : null}
+
+                  <div className="tool-shell__preview-actions">
+                    <button
+                      className="button-muted"
+                      disabled={isProcessing}
+                      onClick={() => removeItem(item.id)}
+                      type="button"
+                    >
+                      목록에서 제거
+                    </button>
+                    {itemState.status === "success" ? (
+                      <button
+                        className="button-link"
+                        onClick={() => handleDownloadResult(item.id)}
+                        type="button"
+                      >
+                        결과 다운로드
+                      </button>
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
     </section>
   );
