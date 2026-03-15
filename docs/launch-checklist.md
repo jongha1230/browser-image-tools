@@ -15,11 +15,12 @@
 
 - 공유용 링크가 Preview URL이 아니라 프로젝트의 안정적인 Production `vercel.app` 주소인지 확인
 - 공개 데모가 필요한 경우 Vercel Authentication 또는 배포 보호가 Production에 걸려 있지 않은지 확인
-- 실제 운영 도메인이 `NEXT_PUBLIC_SITE_URL` 또는 `SITE_URL`에 `https://` 포함 값으로 반영돼 있는지 확인
-- 운영 도메인 미설정 또는 `*.vercel.app` 호스트 사용 시 `noindex`와 크롤링 차단이 유지되는지 확인
-- 운영 도메인 미설정 또는 `*.vercel.app` 호스트 사용 시 `X-Robots-Tag: noindex, nofollow` 응답 헤더도 함께 유지되는지 확인
-- `robots.txt`, `sitemap.xml`, `rss.xml`이 운영 도메인 기준으로 노출되는지 확인
-- 홈, 도구, 가이드, 소개, 개인정보, 문의 페이지 메타데이터와 canonical 확인
+- canonical public host 전략이 무엇인지 먼저 고정하기
+- demo-first 운영이면 `SITE_URL`, `NEXT_PUBLIC_SITE_URL`, `ALLOW_VERCEL_APP_INDEXING`를 비워 두고 `noindex`와 크롤링 차단이 유지되는지 확인
+- Production `vercel.app`를 임시 public canonical host로 쓰면 `SITE_URL`과 `NEXT_PUBLIC_SITE_URL`이 정확한 Production `https://<project>.vercel.app` 원본인지, `ALLOW_VERCEL_APP_INDEXING=true`가 Production에만 설정됐는지 확인
+- custom domain 운영이면 `SITE_URL`과 `NEXT_PUBLIC_SITE_URL`이 최종 `https://` 도메인과 정확히 일치하는지 확인
+- public canonical 모드에서는 `robots.txt`, `sitemap.xml`, `rss.xml`이 같은 canonical host 기준으로 노출되는지 확인
+- 홈, 도구, 가이드, 소개, 개인정보, 문의 페이지 메타데이터와 canonical이 현재 public host 전략과 일치하는지 확인
 - `icon.svg`와 Apple 터치 아이콘이 브라우저 탭과 홈 화면 저장 시 정상 노출되는지 확인
 
 ## 정책 및 운영
