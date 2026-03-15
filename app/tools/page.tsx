@@ -15,8 +15,8 @@ export default function ToolsPage() {
       <PageHero eyebrow="Tools Hub" title="이미지 작업을 실제 라우트로 분리한 도구 허브">
         <p>
           각 도구는 고유 메타데이터와 초기 설명 콘텐츠를 가진 독립 페이지로
-          구성했습니다. 이후 실제 브라우저 처리 로직을 각 라우트에 순차적으로
-          연결할 수 있습니다.
+          구성했습니다. 현재는 각 라우트에서 로컬 업로드, 배치 처리, ZIP
+          내보내기까지 바로 사용할 수 있습니다.
         </p>
       </PageHero>
 
@@ -39,9 +39,9 @@ export default function ToolsPage() {
 
       <PageSection title="다음으로 붙일 기능">
         <ul className="list-reset">
-          <li>도구별 실제 압축, 리사이즈, 변환, EXIF 제거 옵션 패널</li>
-          <li>처리 결과 비교와 내보내기 전 검수 흐름</li>
-          <li>배치 내보내기 다운로드 흐름</li>
+          <li>가이드 콘텐츠와 각 도구 간 내부 링크 확장</li>
+          <li>광고 슬롯 배치와 성능 측정</li>
+          <li>대용량 파일 대응을 위한 추가 워커 최적화</li>
         </ul>
       </PageSection>
     </PageLayout>

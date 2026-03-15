@@ -25,9 +25,9 @@ export default function ResizeImagePage() {
         <p>{tool.description}</p>
         <p>{tool.intro}</p>
         <p>
-          이 페이지에서는 이미지 1개의 가로와 세로 픽셀 크기를 브라우저 안에서
-          다시 조정하고, 원본과 결과 해상도를 비교한 뒤 바로 다운로드할 수
-          있습니다.
+          이 페이지에서는 여러 이미지의 가로와 세로 픽셀 크기를 브라우저 안에서
+          다시 조정하고, 파일별 원본과 결과 해상도를 비교한 뒤 성공한 파일을 ZIP으로
+          한 번에 다운로드할 수 있습니다.
         </p>
         <div className="hero__actions">
           <Link className="button-link" href="/tools">
@@ -99,10 +99,10 @@ export default function ResizeImagePage() {
 
       <PageSection title="현재 범위와 안내">
         <ul className="chip-list">
-          <li>현재 티켓에서는 단일 파일 리사이즈만 지원합니다.</li>
-          <li>잘못된 크기 입력이나 브라우저 인코딩 실패는 메시지로 바로 안내합니다.</li>
+          <li>동일한 가로·세로 값을 업로드한 여러 파일에 한 번에 적용합니다.</li>
+          <li>비율 잠금이 켜져 있으면 각 파일이 지정한 박스 안에 맞게 개별 비율을 유지합니다.</li>
+          <li>잘못된 크기 입력이나 브라우저 인코딩 실패는 파일별 상태와 메시지로 안내합니다.</li>
           <li>브라우저 캔버스를 다시 거치므로 EXIF 같은 메타데이터는 유지되지 않을 수 있습니다.</li>
-          <li>배치 리사이즈와 일괄 내보내기는 이번 티켓 범위에 포함하지 않습니다.</li>
         </ul>
       </PageSection>
 
@@ -122,12 +122,12 @@ export default function ResizeImagePage() {
           </div>
           <div className="card">
             <h3>출력 정보</h3>
-            <p>예상 출력 크기, 저장 파일명, 결과 파일 크기와 해상도를 비교합니다.</p>
+            <p>예상 출력 크기, 저장 파일명, 결과 파일 크기와 해상도를 파일별로 비교합니다.</p>
           </div>
           <div className="card">
             <h3>오류 처리</h3>
             <p>
-              잘못된 픽셀 값, 단일 파일 제한, 브라우저 처리 실패를 모두 사용자
+              잘못된 픽셀 값과 브라우저 처리 실패, 부분 실패 결과를 모두 사용자
               메시지로 안내합니다.
             </p>
           </div>
@@ -136,7 +136,7 @@ export default function ResizeImagePage() {
 
       <ToolShell
         title={tool.title}
-        description="이미지 1개의 해상도를 로컬에서 조정하고, 원본과 결과 크기를 비교한 뒤 바로 다운로드합니다."
+        description="여러 이미지의 해상도를 로컬에서 조정하고, 원본과 결과 크기를 비교한 뒤 성공한 결과를 개별 또는 ZIP으로 다운로드합니다."
         primaryActionLabel="이미지 크기 조절하기"
         variant="resize"
       />

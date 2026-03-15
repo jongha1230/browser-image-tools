@@ -25,9 +25,9 @@ export default function RemoveExifPage() {
         <p>{tool.description}</p>
         <p>{tool.intro}</p>
         <p>
-          이 페이지에서는 이미지 1개를 브라우저 안에서 같은 형식으로 다시
+          이 페이지에서는 여러 이미지를 브라우저 안에서 같은 형식으로 다시
           저장해 GPS 위치, 기기 모델, 촬영 시각 같은 메타데이터 노출 가능성을
-          줄이고 결과 파일을 바로 다운로드할 수 있습니다.
+          줄이고 성공한 결과를 ZIP으로 한 번에 다운로드할 수 있습니다.
         </p>
         <div className="hero__actions">
           <Link className="button-link" href="/tools">
@@ -102,10 +102,10 @@ export default function RemoveExifPage() {
 
       <PageSection title="현재 범위와 안내">
         <ul className="chip-list">
-          <li>이번 티켓에서는 단일 파일 EXIF 제거만 지원합니다.</li>
+          <li>업로드한 여러 파일을 같은 형식으로 다시 저장해 메타데이터 제거 흐름을 일괄 적용합니다.</li>
           <li>원본 파일명, 형식, 용량, 해상도와 예상 저장 이름을 먼저 확인할 수 있습니다.</li>
           <li>위치, 기기, 촬영 시각처럼 민감할 수 있는 메타데이터 제거 목적을 화면에 명시합니다.</li>
-          <li>배치 처리와 일괄 다운로드는 이번 티켓 범위에 포함하지 않습니다.</li>
+          <li>파일별 성공과 실패를 구분해 보여 주고 성공한 결과만 ZIP으로 저장합니다.</li>
         </ul>
       </PageSection>
 
@@ -133,14 +133,14 @@ export default function RemoveExifPage() {
           <div className="card">
             <h3>결과 정보</h3>
             <p>
-              결과 파일명, 출력 형식, 파일 크기, 해상도를 확인한 뒤 바로
-              다운로드할 수 있습니다.
+              결과 파일명, 출력 형식, 파일 크기, 해상도를 확인한 뒤 개별 또는
+              ZIP으로 다운로드할 수 있습니다.
             </p>
           </div>
           <div className="card">
             <h3>오류 처리</h3>
             <p>
-              지원하지 않는 형식, 단일 파일 제한, 브라우저 재저장 실패를 모두
+              지원하지 않는 형식과 브라우저 재저장 실패, 부분 실패 결과를 모두
               사용자 메시지로 안내합니다.
             </p>
           </div>
@@ -149,7 +149,7 @@ export default function RemoveExifPage() {
 
       <ToolShell
         title={tool.title}
-        description="이미지 1개를 로컬에서 같은 형식으로 다시 저장해 EXIF 메타데이터 노출 가능성을 줄이고, 결과 파일을 바로 다운로드합니다."
+        description="여러 이미지를 로컬에서 같은 형식으로 다시 저장해 EXIF 메타데이터 노출 가능성을 줄이고, 성공한 결과를 개별 또는 ZIP으로 다운로드합니다."
         primaryActionLabel="EXIF 제거하기"
         variant="removeExif"
       />
