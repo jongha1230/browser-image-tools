@@ -1,9 +1,14 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { SiteContainer } from "@/components/site-container";
 import { footerNav, siteName, siteTagline } from "@/lib/site-content";
 
 export function SiteFooter() {
+  const pathname = usePathname();
+
   return (
     <footer className="site-footer">
       <SiteContainer className="site-footer__inner">
@@ -15,13 +20,21 @@ export function SiteFooter() {
 
         <nav aria-label="보조 탐색">
           <ul className="site-footer__links">
-            {footerNav.map((item) => (
-              <li key={item.href}>
-                <Link className="site-footer__link" href={item.href}>
-                  {item.label}
-                </Link>
-              </li>
-            ))}
+            {footerNav.map((item) => {
+              const isCurrent = pathname === item.href;
+
+              return (
+                <li key={item.href}>
+                  <Link
+                    aria-current={isCurrent ? "page" : undefined}
+                    className="site-footer__link"
+                    href={item.href}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </nav>
       </SiteContainer>
