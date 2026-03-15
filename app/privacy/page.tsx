@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { PageHero, PageLayout, PageSection } from "@/components/page-layout";
+import { contactEmail, contactEmailHref } from "@/lib/site-content";
 import { createPageMetadata, getPageMetadataEntry } from "@/lib/site-metadata";
 
 export const metadata: Metadata = createPageMetadata(getPageMetadataEntry("/privacy"));
@@ -37,6 +38,11 @@ export default function PrivacyPage() {
           <li>이미지 파일은 도구 기능을 위해 원격 서버로 전송하지 않으며, 브라우저 안에서만 처리합니다.</li>
           <li>로그인, 데이터베이스, 클라우드 업로드, 파일 보관 이력 기능은 현재 범위에 포함하지 않습니다.</li>
           <li>브라우저 재인코딩 과정에서 메타데이터가 정리될 수 있으며, 결과 파일은 사용자가 직접 저장할 때만 기기에 남습니다.</li>
+          <li>
+            문의는{" "}
+            <a href={contactEmailHref}>{contactEmail}</a>
+            로 받지만, 재현 확인 전에는 민감한 원본 파일 첨부를 기본 절차로 요구하지 않습니다.
+          </li>
           <li>문의나 버그 제보 시에도 원본 파일 업로드를 기본 절차로 요구하지 않는 방향을 우선합니다.</li>
         </ul>
       </PageSection>
@@ -74,6 +80,7 @@ export default function PrivacyPage() {
         <ul className="list-reset">
           <li>브라우저 안에서 처리하더라도 다운로드한 결과 파일은 기기에 남으므로 공용 PC에서는 작업 후 파일 정리를 권장합니다.</li>
           <li>EXIF 제거는 메타데이터 정리에 도움이 되지만 사진 안에 직접 찍힌 주소, 얼굴, 번호판 같은 시각 정보까지 자동으로 숨기지는 않습니다.</li>
+          <li>문의가 필요하면 원본 첨부보다 브라우저 버전, 사용한 도구 URL, 오류 메시지, 스크린샷을 먼저 보내는 편이 안전합니다.</li>
           <li>정책 변경이 생기면 이 페이지와 관련 안내 페이지를 실제 정보 기준으로 함께 갱신합니다.</li>
         </ul>
       </PageSection>

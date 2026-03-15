@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { PageHero, PageLayout, PageSection } from "@/components/page-layout";
+import { contactEmail, contactEmailHref } from "@/lib/site-content";
 import { createPageMetadata, getPageMetadataEntry } from "@/lib/site-metadata";
 
 export const metadata: Metadata = createPageMetadata(getPageMetadataEntry("/about"));
@@ -58,6 +59,11 @@ export default function AboutPage() {
           <li>파일 처리 기능은 브라우저 안에서 끝나야 하며 원격 업로드를 전제로 하지 않습니다.</li>
           <li>각 도구와 가이드를 실제 URL로 제공해 검색과 공유가 자연스럽게 이어지도록 구성합니다.</li>
           <li>한국어 사용자가 먼저 이해할 수 있는 설명을 우선하고, UI와 본문 모두 실무적인 판단 기준을 담습니다.</li>
+          <li>
+            프로젝트 문의는{" "}
+            <a href={contactEmailHref}>{contactEmail}</a>
+            를 기본 연락처로 공개하고, 지원 경로가 바뀌면 관련 안내 페이지를 함께 갱신합니다.
+          </li>
           <li>무료 운영을 위한 광고 도입은 검토하되, 실제 제공사가 정해지기 전에는 임의의 식별자나 정책 문구를 만들지 않습니다.</li>
         </ul>
       </PageSection>

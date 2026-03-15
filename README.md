@@ -7,10 +7,19 @@
 ## 공개 데모
 
 - Production demo: [https://browser-image-tools.vercel.app](https://browser-image-tools.vercel.app)
+- Project contact: [browserimagetools@gmail.com](mailto:browserimagetools@gmail.com)
+- Secondary support path: [GitHub Issues](https://github.com/jongha1230/browser-image-tools/issues)
 - Proof assets package: [docs/proof-assets.md](./docs/proof-assets.md)
 - 캡처 기준일: 2026년 3월 15일, Vercel production alias 기준
 - 현재 배포는 Production `vercel.app`를 임시 public canonical host로 사용하는 공개 제출 모드입니다.
 - 이후 custom domain을 연결하면 Search Console, Search Advisor, canonical, sitemap 검증을 새 host 기준으로 다시 수행해야 합니다.
+
+## 문의 / 지원
+
+- 프로젝트 관련 일반 문의와 운영 연락은 [browserimagetools@gmail.com](mailto:browserimagetools@gmail.com)으로 받습니다.
+- 재현 가능한 버그 보고와 공개 추적은 [GitHub Issues](https://github.com/jongha1230/browser-image-tools/issues)를 보조 경로로 유지합니다.
+- 민감한 원본 파일은 바로 보내기보다 브라우저/OS 버전, 사용한 도구 URL, 재현 단계, 오류 메시지, 스크린샷을 먼저 정리하는 편을 권장합니다.
+- 실제 파일 처리는 계속 브라우저 안에서만 이뤄지며, 이 저장소는 백엔드 업로드나 메일 폼 전송 기능을 추가하지 않습니다.
 
 ## 현재 구현된 기능
 

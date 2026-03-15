@@ -1,6 +1,8 @@
 export const repositoryUrl = "https://github.com/jongha1230/browser-image-tools";
 export const repositoryIssuesUrl = `${repositoryUrl}/issues`;
-export const siteUpdatedAt = "2026-03-15T23:50:00+09:00";
+export const contactEmail = "browserimagetools@gmail.com";
+export const contactEmailHref = `mailto:${contactEmail}`;
+export const siteUpdatedAt = "2026-03-16T09:00:00+09:00";
 
 export type ToolSlug =
   | "compress-image"
