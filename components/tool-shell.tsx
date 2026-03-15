@@ -42,6 +42,7 @@ import {
 import {
   formatFileSize,
   getSupportedImageMimeType,
+  shouldReplaceUploadQueue,
   supportedImageAccept,
   supportedImageTypesText,
   type SupportedImageMimeType,
@@ -250,7 +251,12 @@ function getDropzoneCopy(
   variant: ToolShellVariant,
   keepAspectRatio: boolean,
   skippedConvertCount: number,
+  replaceOnNextAdd: boolean,
 ) {
+  if (replaceOnNextAdd) {
+    return "다음 파일 추가 시 현재 단일 작업 자동 교체";
+  }
+
   if (variant === "compress") {
     return "같은 품질과 출력 형식을 큐 전체에 일괄 적용";
   }
@@ -297,6 +303,7 @@ export function ToolShell({
   >("width");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPreparingZip, setIsPreparingZip] = useState(false);
+  const [readyForReplacement, setReadyForReplacement] = useState(false);
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [processingNote, setProcessingNote] = useState<string | null>(null);
   const [referenceDimensions, setReferenceDimensions] =
@@ -307,6 +314,7 @@ export function ToolShell({
   const [processingEngine, setProcessingEngine] =
     useState<ProcessingEngine>("main");
   const dragDepthRef = useRef(0);
+  const dropzoneRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const optionPanelRef = useRef<HTMLElement>(null);
   const workflowSummaryRef = useRef<HTMLDivElement>(null);
@@ -433,14 +441,33 @@ export function ToolShell({
   const selectedItemState = selectedItem
     ? (queueState[selectedItem.id] ?? { status: "queued" })
     : null;
+  const hasQueuedItems = items.some(
+    (item) => (queueState[item.id]?.status ?? "queued") === "queued",
+  );
   const selectedResult =
     selectedItemState?.status === "success" ? selectedItemState.result ?? null : null;
-  const dropzoneTitle = hasItems
-    ? "이미지를 더 추가하거나 현재 큐를 조정하세요"
-    : "이미지를 끌어 놓거나 파일 선택으로 여러 개 추가하세요";
-  const dropzoneHint = hasItems
-    ? `추가한 파일은 현재 큐 뒤에 이어 붙습니다. ${supportedImageTypesText} 이미지를 다시 선택하거나 클립보드 붙여넣기로 바로 더할 수 있습니다.`
-    : `지원 형식은 ${supportedImageTypesText}입니다. 붙여넣기 이미지는 이 페이지에서 바로 추가할 수 있고, 드롭 영역에 포커스한 뒤 Enter 또는 Space 로도 파일 선택 창을 열 수 있습니다.`;
+  const shouldReplaceOnAdd = shouldReplaceUploadQueue({
+    existingItemCount: items.length,
+    existingStatus: selectedItemState?.status ?? null,
+    isProcessing,
+    readyForReplacement,
+  });
+  const repeatActionMessage = readyForReplacement
+    ? "다운로드를 시작했습니다. 새 파일을 추가하면 현재 단일 결과와 미리보기가 자동으로 새 작업으로 교체됩니다."
+    : selectedItemState?.status === "error" && shouldReplaceOnAdd
+      ? "실패한 단일 작업은 새 파일을 추가하면 자동으로 교체됩니다."
+      : null;
+  const dropzoneTitle = !hasItems
+    ? "이미지를 끌어 놓거나 파일 선택으로 여러 개 추가하세요"
+    : shouldReplaceOnAdd
+      ? "다음 파일을 추가하면 새 작업으로 바로 시작합니다"
+      : "이미지를 더 추가하거나 현재 큐를 조정하세요";
+  const dropzoneHint = !hasItems
+    ? `지원 형식은 ${supportedImageTypesText}입니다. 붙여넣기 이미지는 이 페이지에서 바로 추가할 수 있고, 드롭 영역에 포커스한 뒤 Enter 또는 Space 로도 파일 선택 창을 열 수 있습니다.`
+    : shouldReplaceOnAdd
+      ? `새 파일을 선택, 드롭, 붙여넣기하면 현재 단일 작업을 자동으로 교체합니다. 여러 파일을 한 번에 고르면 이전 단일 세션 대신 새 배치로 시작합니다.`
+      : `추가한 파일은 현재 큐 뒤에 이어 붙습니다. ${supportedImageTypesText} 이미지를 다시 선택하거나 클립보드 붙여넣기로 바로 더할 수 있습니다.`;
+  const showClearQueueAction = hasItems && !shouldReplaceOnAdd;
   const startChecklist = toolVariant
     ? [
         "JPEG, PNG, WebP 이미지를 드래그, 파일 선택, 붙여넣기로 추가",
@@ -668,6 +695,28 @@ export function ToolShell({
     };
   }, []);
 
+  function handleIncomingFiles(
+    files: Iterable<File> | ArrayLike<File> | null | undefined,
+    source: "drop" | "input" | "paste",
+  ) {
+    const replaceCurrentQueue = shouldReplaceOnAdd;
+    const acceptedCount = addFiles(
+      files,
+      source,
+      replaceCurrentQueue ? "replace" : "append",
+    );
+
+    if (acceptedCount > 0) {
+      setReadyForReplacement(false);
+
+      if (replaceCurrentQueue) {
+        window.setTimeout(() => {
+          focusWorkspaceRegion(optionPanelRef.current);
+        }, 120);
+      }
+    }
+  }
+
   const handleWindowPaste = useEffectEvent((event: ClipboardEvent) => {
     const target = event.target;
 
@@ -679,7 +728,7 @@ export function ToolShell({
       return;
     }
 
-    addFiles(getClipboardFiles(event.clipboardData), "paste");
+    handleIncomingFiles(getClipboardFiles(event.clipboardData), "paste");
   });
 
   useEffect(() => {
@@ -698,7 +747,39 @@ export function ToolShell({
     setQueueState({});
     setProcessingError(null);
     setProcessingNote(null);
-  }, [itemIdsSignature, processingSignature, variant]);
+    setReadyForReplacement(false);
+  }, [processingSignature, variant]);
+
+  useEffect(() => {
+    setQueueState((current) => {
+      if (items.length === 0) {
+        return {};
+      }
+
+      const nextEntries = Object.fromEntries(
+        items.flatMap((item) =>
+          current[item.id] ? [[item.id, current[item.id]]] : [],
+        ),
+      );
+      const currentKeys = Object.keys(current);
+      const nextKeys = Object.keys(nextEntries);
+
+      if (
+        currentKeys.length === nextKeys.length &&
+        currentKeys.every((key) => current[key] === nextEntries[key])
+      ) {
+        return current;
+      }
+
+      return nextEntries;
+    });
+    setProcessingError(null);
+    setProcessingNote(null);
+
+    if (items.length === 0) {
+      setReadyForReplacement(false);
+    }
+  }, [itemIdsSignature, items]);
 
   useEffect(() => {
     if (!selectedPreviewUrl) {
@@ -768,13 +849,18 @@ export function ToolShell({
       return;
     }
 
-    if (hasResults) {
+    if (!isProcessing && hasQueuedItems) {
+      setActiveStep("options");
+      return;
+    }
+
+    if (isProcessing || hasResults) {
       setActiveStep("export");
       return;
     }
 
     setActiveStep("options");
-  }, [hasResults, items.length]);
+  }, [hasQueuedItems, hasResults, isProcessing, items.length]);
 
   useEffect(() => {
     if (!hasItems) {
@@ -822,7 +908,7 @@ export function ToolShell({
   }
 
   function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
-    addFiles(event.currentTarget.files, "input");
+    handleIncomingFiles(event.currentTarget.files, "input");
     event.currentTarget.value = "";
   }
 
@@ -853,7 +939,7 @@ export function ToolShell({
 
     dragDepthRef.current = 0;
     setIsDragging(false);
-    addFiles(event.dataTransfer.files, "drop");
+    handleIncomingFiles(event.dataTransfer.files, "drop");
   }
 
   function handleQualityChange(event: ChangeEvent<HTMLInputElement>) {
@@ -1037,6 +1123,7 @@ export function ToolShell({
     setIsProcessing(true);
     setProcessingError(null);
     setProcessingNote(null);
+    setReadyForReplacement(false);
     setActiveStep("export");
     setQueueState(
       Object.fromEntries(
@@ -1129,6 +1216,15 @@ export function ToolShell({
     setIsProcessing(false);
   }
 
+  function moveToNextUploadStep() {
+    setReadyForReplacement(true);
+    setActiveStep("upload");
+
+    window.setTimeout(() => {
+      focusWorkspaceRegion(dropzoneRef.current);
+    }, 120);
+  }
+
   async function handleDownloadZip() {
     if (!toolVariant || successCount === 0) {
       return;
@@ -1153,6 +1249,10 @@ export function ToolShell({
         new Blob([archive], { type: "application/zip" }),
         createBatchZipFileName(toolVariant),
       );
+
+      if (items.length === 1 && successCount === 1) {
+        moveToNextUploadStep();
+      }
     } catch (error: unknown) {
       setProcessingError(
         error instanceof Error
@@ -1172,6 +1272,10 @@ export function ToolShell({
     }
 
     downloadBlob(result.blob, result.fileName);
+
+    if (items.length === 1 && selectedItemId === itemId) {
+      moveToNextUploadStep();
+    }
   }
 
   let statusByStep: Record<StepKey, string>;
@@ -1261,6 +1365,10 @@ export function ToolShell({
     };
   }
 
+  const uploadStepMessage = repeatActionMessage ?? statusByStep.upload;
+  const currentStepMessage =
+    activeStep === "upload" ? uploadStepMessage : statusByStep[activeStep];
+
   function renderWorkflowSidebar() {
     if (!selectedItem || !selectedItemState) {
       return null;
@@ -1314,7 +1422,7 @@ export function ToolShell({
               ? `총 ${items.length}개 중 ${successCount}개 성공, ${errorCount}개 실패입니다.`
               : isProcessing
                 ? `${items.length}개 파일을 순서대로 처리하고 있습니다.`
-                : statusByStep[activeStep]}
+                : currentStepMessage}
           </p>
 
           <div className="tool-shell__actions tool-shell__actions--stack">
@@ -1359,6 +1467,12 @@ export function ToolShell({
               </>
             )}
           </div>
+
+          {repeatActionMessage ? (
+            <p className="tool-shell__helper tool-shell__helper--next-action">
+              {repeatActionMessage}
+            </p>
+          ) : null}
 
           {showProgress ? (
             <div className="tool-shell__progress tool-shell__progress--compact">
@@ -1436,11 +1550,13 @@ export function ToolShell({
             className="tool-shell__dropzone"
             data-dragging={isDragging}
             data-has-items={hasItems}
+            data-ready-for-replacement={shouldReplaceOnAdd}
             onKeyDown={handleDropzoneKeyDown}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
+            ref={dropzoneRef}
             role="group"
             tabIndex={isProcessing ? -1 : 0}
           >
@@ -1466,7 +1582,7 @@ export function ToolShell({
               <button className="button-link" onClick={openFilePicker} type="button">
                 파일 선택
               </button>
-              {hasItems ? (
+              {showClearQueueAction ? (
                 <button
                   className="button-muted"
                   disabled={isProcessing}
@@ -1480,7 +1596,14 @@ export function ToolShell({
             <ul className="tool-shell__drop-highlights">
               <li>브라우저 안에서만 파일 보관 및 처리</li>
               <li>JPEG, PNG, WebP 파일만 허용</li>
-              <li>{getDropzoneCopy(variant, keepAspectRatio, skippedConvertCount)}</li>
+              <li>
+                {getDropzoneCopy(
+                  variant,
+                  keepAspectRatio,
+                  skippedConvertCount,
+                  shouldReplaceOnAdd,
+                )}
+              </li>
             </ul>
           </div>
 
@@ -1515,7 +1638,7 @@ export function ToolShell({
                   role="status"
                 >
                   <strong>{stepLabels[activeStep]}</strong>
-                  <p>{statusByStep[activeStep]}</p>
+                  <p>{currentStepMessage}</p>
                 </div>
                 <dl className="tool-shell__stat-list tool-shell__stat-list--compact">
                   <div>
@@ -1547,7 +1670,7 @@ export function ToolShell({
                   role="status"
                 >
                   <strong>{stepLabels.upload}</strong>
-                  <p>{statusByStep.upload}</p>
+                  <p>{uploadStepMessage}</p>
                 </div>
               </>
             )}

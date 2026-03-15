@@ -5,7 +5,9 @@ export type UploadFileLike = {
   lastModified: number;
 };
 
+export type UploadMode = "append" | "replace";
 export type UploadValidationIssueCode = "duplicate" | "unsupported-type";
+export type UploadQueueStatus = "queued" | "processing" | "success" | "error";
 
 export type UploadValidationIssue = {
   code: UploadValidationIssueCode;
@@ -139,6 +141,28 @@ export function validateImageFiles<TFile extends UploadFileLike>(
   }
 
   return { accepted, rejected };
+}
+
+export function shouldReplaceUploadQueue({
+  existingItemCount,
+  existingStatus,
+  isProcessing,
+  readyForReplacement,
+}: {
+  existingItemCount: number;
+  existingStatus: UploadQueueStatus | null;
+  isProcessing: boolean;
+  readyForReplacement: boolean;
+}) {
+  if (isProcessing || existingItemCount !== 1 || !existingStatus) {
+    return false;
+  }
+
+  if (existingStatus === "error") {
+    return true;
+  }
+
+  return existingStatus === "success" && readyForReplacement;
 }
 
 export function formatFileSize(bytes: number) {

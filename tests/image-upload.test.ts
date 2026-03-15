@@ -5,6 +5,7 @@ import {
   formatFileSize,
   getSupportedImageMimeType,
   isSupportedImageFile,
+  shouldReplaceUploadQueue,
   validateImageFiles,
 } from "../lib/image-upload";
 
@@ -100,5 +101,43 @@ describe("image upload helpers", () => {
     expect(formatFileSize(987)).toBe("987 B");
     expect(formatFileSize(1_024)).toBe("1 KB");
     expect(formatFileSize(1_572_864)).toBe("1.5 MB");
+  });
+
+  it("enables automatic replacement only for repeat-ready single sessions", () => {
+    expect(
+      shouldReplaceUploadQueue({
+        existingItemCount: 1,
+        existingStatus: "success",
+        isProcessing: false,
+        readyForReplacement: true,
+      }),
+    ).toBe(true);
+
+    expect(
+      shouldReplaceUploadQueue({
+        existingItemCount: 1,
+        existingStatus: "success",
+        isProcessing: false,
+        readyForReplacement: false,
+      }),
+    ).toBe(false);
+
+    expect(
+      shouldReplaceUploadQueue({
+        existingItemCount: 1,
+        existingStatus: "error",
+        isProcessing: false,
+        readyForReplacement: false,
+      }),
+    ).toBe(true);
+
+    expect(
+      shouldReplaceUploadQueue({
+        existingItemCount: 2,
+        existingStatus: "success",
+        isProcessing: false,
+        readyForReplacement: true,
+      }),
+    ).toBe(false);
   });
 });

@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import {
   createUploadFileId,
   getSupportedImageLabel,
+  type UploadMode,
   validateImageFiles,
 } from "@/lib/image-upload";
 
@@ -27,7 +28,11 @@ type ImageUploadContextValue = {
   errors: UploadMessage[];
   items: UploadedImage[];
   lastSource: UploadSource | null;
-  addFiles: (files: Iterable<File> | ArrayLike<File> | null | undefined, source: UploadSource) => void;
+  addFiles: (
+    files: Iterable<File> | ArrayLike<File> | null | undefined,
+    source: UploadSource,
+    mode?: UploadMode,
+  ) => number;
   clearErrors: () => void;
   clearItems: () => void;
   removeItem: (id: string) => void;
@@ -37,6 +42,12 @@ const ImageUploadContext = createContext<ImageUploadContextValue | null>(null);
 
 function createMessageId(index: number) {
   return `upload-message-${index}`;
+}
+
+function revokePreviewUrls(items: UploadedImage[]) {
+  for (const item of items) {
+    URL.revokeObjectURL(item.previewUrl);
+  }
 }
 
 export function ImageUploadProvider({ children }: { children: ReactNode }) {
@@ -52,9 +63,7 @@ export function ImageUploadProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     return () => {
-      for (const item of itemsRef.current) {
-        URL.revokeObjectURL(item.previewUrl);
-      }
+      revokePreviewUrls(itemsRef.current);
     };
   }, []);
 
@@ -80,6 +89,7 @@ export function ImageUploadProvider({ children }: { children: ReactNode }) {
   function addFiles(
     files: Iterable<File> | ArrayLike<File> | null | undefined,
     source: UploadSource,
+    mode: UploadMode = "append",
   ) {
     const incomingFiles = files ? Array.from(files) : [];
 
@@ -89,12 +99,12 @@ export function ImageUploadProvider({ children }: { children: ReactNode }) {
           "클립보드에 JPEG, PNG, WebP 이미지가 없어 붙여넣기할 수 없습니다.",
         ]);
       }
-      return;
+      return 0;
     }
 
     const validation = validateImageFiles(
       incomingFiles,
-      itemsRef.current.map((item) => item.file),
+      mode === "replace" ? [] : itemsRef.current.map((item) => item.file),
     );
     const acceptedItems = validation.accepted.map((file) => ({
       id: createUploadFileId(file),
@@ -104,7 +114,14 @@ export function ImageUploadProvider({ children }: { children: ReactNode }) {
     }));
 
     if (acceptedItems.length > 0) {
-      const nextItems = [...itemsRef.current, ...acceptedItems];
+      const nextItems =
+        mode === "replace"
+          ? acceptedItems
+          : [...itemsRef.current, ...acceptedItems];
+
+      if (mode === "replace") {
+        revokePreviewUrls(itemsRef.current);
+      }
 
       itemsRef.current = nextItems;
       setItems(nextItems);
@@ -112,6 +129,7 @@ export function ImageUploadProvider({ children }: { children: ReactNode }) {
     }
 
     pushErrors(validation.rejected.map((issue) => issue.message));
+    return acceptedItems.length;
   }
 
   function removeItem(id: string) {
@@ -134,9 +152,7 @@ export function ImageUploadProvider({ children }: { children: ReactNode }) {
   }
 
   function clearItems() {
-    for (const item of itemsRef.current) {
-      URL.revokeObjectURL(item.previewUrl);
-    }
+    revokePreviewUrls(itemsRef.current);
 
     itemsRef.current = [];
     setItems([]);
