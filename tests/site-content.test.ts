@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { footerNav, primaryNav, requiredRoutes, toolRoutes } from "../lib/site-content";
+import {
+  footerNav,
+  guideRoutes,
+  primaryNav,
+  requiredRoutes,
+  toolRoutes,
+} from "../lib/site-content";
 import {
   createPageMetadata,
   getPageMetadataEntry,
@@ -17,6 +23,10 @@ describe("site content scaffold", () => {
       "/tools/convert-image",
       "/tools/remove-exif",
       "/guides",
+      "/guides/image-compression-basics",
+      "/guides/webp-vs-jpeg-vs-png",
+      "/guides/remove-exif-for-privacy",
+      "/guides/batch-resize-checklist",
       "/about",
       "/privacy",
       "/contact",
@@ -50,6 +60,27 @@ describe("site content scaffold", () => {
     );
   });
 
+  it("publishes unique guide routes with related tools", () => {
+    expect(guideRoutes.map((guide) => guide.href)).toEqual([
+      "/guides/image-compression-basics",
+      "/guides/webp-vs-jpeg-vs-png",
+      "/guides/remove-exif-for-privacy",
+      "/guides/batch-resize-checklist",
+    ]);
+    expect(new Set(guideRoutes.map((guide) => guide.title)).size).toBe(
+      guideRoutes.length,
+    );
+
+    for (const guide of guideRoutes) {
+      expect(guide.relatedTools.length).toBeGreaterThan(0);
+      expect(
+        guide.relatedTools.every((toolSlug) =>
+          toolRoutes.some((tool) => tool.slug === toolSlug),
+        ),
+      ).toBe(true);
+    }
+  });
+
   it("covers every current route with unique metadata", () => {
     const entries = requiredRoutes.map((path) => getPageMetadataEntry(path));
 
@@ -63,7 +94,7 @@ describe("site content scaffold", () => {
 
     expect(metadata.alternates).toEqual({ canonical: "/tools" });
     expect(metadata.openGraph).toMatchObject({
-      title: "도구 모음",
+      title: "이미지 도구 허브",
       description:
         "이미지 압축, 크기 조절, 포맷 변환, EXIF 제거 도구를 실제 라우트로 모아 둔 허브 페이지입니다.",
       locale: "ko_KR",

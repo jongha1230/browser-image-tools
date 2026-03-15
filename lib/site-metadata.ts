@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import {
+  guideRoutes,
   requiredRoutes,
   siteDescription,
   siteName,
@@ -37,38 +38,49 @@ const toolPageMetadataEntries = Object.fromEntries(
   ]),
 ) as Record<(typeof toolRoutes)[number]["href"], PageMetadataEntry>;
 
+const guidePageMetadataEntries = Object.fromEntries(
+  guideRoutes.map((guide) => [
+    guide.href,
+    {
+      title: guide.title,
+      description: guide.metadataDescription,
+    },
+  ]),
+) as Record<(typeof guideRoutes)[number]["href"], PageMetadataEntry>;
+
 export const pageMetadataCatalog: Record<SitePath, PageMetadataEntry> = {
   "/": {
-    title: "홈",
+    title: "로컬 이미지 도구 홈",
     description:
-      "브라우저 안에서 이미지 압축, 크기 조절, 포맷 변환, EXIF 제거 흐름을 살펴보는 한국어 중심 이미지 도구 홈입니다.",
+      "브라우저 안에서 이미지 압축, 크기 조절, 포맷 변환, EXIF 제거와 배치 내보내기를 처리하는 한국어 중심 이미지 도구 홈입니다.",
   },
   "/tools": {
-    title: "도구 모음",
+    title: "이미지 도구 허브",
     description:
       "이미지 압축, 크기 조절, 포맷 변환, EXIF 제거 도구를 실제 라우트로 모아 둔 허브 페이지입니다.",
   },
   "/guides": {
-    title: "가이드",
+    title: "이미지 작업 가이드",
     description:
-      "이미지 최적화, 포맷 선택, 개인정보 보호 흐름을 다룰 한국어 가이드 허브 페이지입니다.",
+      "이미지 최적화, 포맷 선택, EXIF 제거, 배치 리사이즈 흐름을 다루는 한국어 가이드 허브 페이지입니다.",
   },
   "/about": {
-    title: "소개",
+    title: "서비스 소개",
     description:
-      "브라우저 로컬 처리 원칙과 한국어 중심 이미지 유틸리티 서비스 방향을 소개하는 페이지입니다.",
+      "브라우저 로컬 처리 원칙, 지원 범위, 광고 준비 방향을 소개하는 한국어 이미지 유틸리티 소개 페이지입니다.",
   },
   "/privacy": {
     title: "개인정보 처리방침",
     description:
-      "브라우저 로컬 처리 원칙과 향후 광고 운영 시의 개인정보 기준을 설명하는 페이지입니다.",
+      "브라우저 로컬 처리 원칙과 광고·쿠키 고지 예정 사항을 설명하는 한국어 개인정보 처리 페이지입니다.",
   },
   "/contact": {
-    title: "문의",
+    title: "문의 및 제휴 안내",
     description:
-      "문의 채널과 향후 운영 연락 방식을 안내하는 기본 연락처 페이지입니다.",
+      "버그 제보, 운영 문의, 광고 제휴 문의 시 확인할 항목과 안내 방식을 정리한 페이지입니다.",
   },
   ...toolPageMetadataEntries,
+  ...guidePageMetadataEntries,
 };
 
 export function getPageMetadataEntry(path: SitePath) {

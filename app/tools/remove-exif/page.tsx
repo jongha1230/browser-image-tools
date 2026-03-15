@@ -3,10 +3,11 @@ import Link from "next/link";
 
 import { PageHero, PageLayout, PageSection } from "@/components/page-layout";
 import { ToolShell } from "@/components/tool-shell";
-import { getToolRoute } from "@/lib/site-content";
+import { getGuidesForTool, getToolRoute } from "@/lib/site-content";
 import { createPageMetadata, getPageMetadataEntry } from "@/lib/site-metadata";
 
 const tool = getToolRoute("remove-exif");
+const relatedGuides = getGuidesForTool(tool.slug).slice(0, 2);
 
 export const metadata: Metadata = createPageMetadata(
   getPageMetadataEntry(tool.href),
@@ -144,6 +145,23 @@ export default function RemoveExifPage() {
               사용자 메시지로 안내합니다.
             </p>
           </div>
+        </div>
+      </PageSection>
+
+      <PageSection
+        title="같이 읽으면 좋은 가이드"
+        intro={<p>메타데이터가 왜 문제인지와 공유 전 체크 포인트를 정리한 문서를 함께 연결했습니다.</p>}
+      >
+        <div className="card-grid">
+          {relatedGuides.map((guide) => (
+            <article className="card" key={guide.slug}>
+              <h3>{guide.title}</h3>
+              <p>{guide.description}</p>
+              <Link className="card__link" href={guide.href}>
+                가이드 읽기
+              </Link>
+            </article>
+          ))}
         </div>
       </PageSection>
 

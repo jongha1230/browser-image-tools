@@ -3,10 +3,11 @@ import Link from "next/link";
 
 import { PageHero, PageLayout, PageSection } from "@/components/page-layout";
 import { ToolShell } from "@/components/tool-shell";
-import { getToolRoute } from "@/lib/site-content";
+import { getGuidesForTool, getToolRoute } from "@/lib/site-content";
 import { createPageMetadata, getPageMetadataEntry } from "@/lib/site-metadata";
 
 const tool = getToolRoute("resize-image");
+const relatedGuides = getGuidesForTool(tool.slug).slice(0, 2);
 
 export const metadata: Metadata = createPageMetadata(
   getPageMetadataEntry(tool.href),
@@ -131,6 +132,23 @@ export default function ResizeImagePage() {
               메시지로 안내합니다.
             </p>
           </div>
+        </div>
+      </PageSection>
+
+      <PageSection
+        title="같이 읽으면 좋은 가이드"
+        intro={<p>여러 장을 같은 규격으로 맞출 때 생기는 판단 기준을 가이드로 이어서 정리했습니다.</p>}
+      >
+        <div className="card-grid">
+          {relatedGuides.map((guide) => (
+            <article className="card" key={guide.slug}>
+              <h3>{guide.title}</h3>
+              <p>{guide.description}</p>
+              <Link className="card__link" href={guide.href}>
+                가이드 읽기
+              </Link>
+            </article>
+          ))}
         </div>
       </PageSection>
 

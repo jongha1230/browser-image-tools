@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { PageHero, PageLayout, PageSection } from "@/components/page-layout";
-import { toolRoutes } from "@/lib/site-content";
+import { guideRoutes, toolRoutes } from "@/lib/site-content";
 import { createPageMetadata, getPageMetadataEntry } from "@/lib/site-metadata";
 
 export const metadata: Metadata = createPageMetadata(
@@ -39,10 +39,27 @@ export default function ToolsPage() {
 
       <PageSection title="다음으로 붙일 기능">
         <ul className="list-reset">
-          <li>가이드 콘텐츠와 각 도구 간 내부 링크 확장</li>
+          <li>도구별 옵션 프리셋 세분화와 저장 규칙 보강</li>
           <li>광고 슬롯 배치와 성능 측정</li>
           <li>대용량 파일 대응을 위한 추가 워커 최적화</li>
         </ul>
+      </PageSection>
+
+      <PageSection
+        title="도구 전에 읽어두면 좋은 가이드"
+        intro={<p>각 도구에서 자주 묻는 판단 기준을 가이드 문서로 분리해 두었습니다.</p>}
+      >
+        <div className="card-grid">
+          {guideRoutes.map((guide) => (
+            <article className="card" key={guide.slug}>
+              <h3>{guide.title}</h3>
+              <p>{guide.description}</p>
+              <Link className="card__link" href={guide.href}>
+                가이드 읽기
+              </Link>
+            </article>
+          ))}
+        </div>
       </PageSection>
     </PageLayout>
   );
