@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  contactEmail,
+  contactEmailHref,
   footerNav,
   guideRoutes,
   primaryNav,
+  repositoryIssuesUrl,
   requiredRoutes,
   toolRoutes,
 } from "../lib/site-content";
@@ -51,6 +54,14 @@ describe("site content scaffold", () => {
       "/privacy",
       "/contact",
     ]);
+  });
+
+  it("publishes the public support contacts", () => {
+    expect(contactEmail).toBe("browserimagetools@gmail.com");
+    expect(contactEmailHref).toBe("mailto:browserimagetools@gmail.com");
+    expect(repositoryIssuesUrl).toBe(
+      "https://github.com/jongha1230/browser-image-tools/issues",
+    );
   });
 
   it("keeps the launched tool routes unique", () => {
