@@ -444,6 +444,7 @@ export function ToolShell({
   const hasQueuedItems = items.some(
     (item) => (queueState[item.id]?.status ?? "queued") === "queued",
   );
+  const shouldPrioritizeZipDownload = successCount > 1;
   const selectedResult =
     selectedItemState?.status === "success" ? selectedItemState.result ?? null : null;
   const shouldReplaceOnAdd = shouldReplaceUploadQueue({
@@ -1368,6 +1369,9 @@ export function ToolShell({
   const uploadStepMessage = repeatActionMessage ?? statusByStep.upload;
   const currentStepMessage =
     activeStep === "upload" ? uploadStepMessage : statusByStep[activeStep];
+  const selectedDownloadLabel = shouldPrioritizeZipDownload
+    ? "선택한 파일만 다운로드"
+    : "대표 결과 다운로드";
 
   function renderWorkflowSidebar() {
     if (!selectedItem || !selectedItemState) {
@@ -1436,18 +1440,12 @@ export function ToolShell({
                 >
                   {isProcessing ? "배치 처리 중..." : primaryActionLabel}
                 </button>
-                {selectedResult ? (
-                  <button
-                    className="button-link"
-                    onClick={() => handleDownloadResult(selectedItem.id)}
-                    type="button"
-                  >
-                    대표 결과 다운로드
-                  </button>
-                ) : null}
                 <button
                   className={
-                    hasResults && !selectedResult ? "button-link" : "button-muted"
+                    shouldPrioritizeZipDownload ||
+                    (hasResults && !selectedResult)
+                      ? "button-link"
+                      : "button-muted"
                   }
                   disabled={!canDownloadZip}
                   onClick={handleDownloadZip}
@@ -1455,6 +1453,17 @@ export function ToolShell({
                 >
                   {isPreparingZip ? "ZIP 준비 중..." : "성공 파일 ZIP 다운로드"}
                 </button>
+                {selectedResult ? (
+                  <button
+                    className={
+                      shouldPrioritizeZipDownload ? "button-muted" : "button-link"
+                    }
+                    onClick={() => handleDownloadResult(selectedItem.id)}
+                    type="button"
+                  >
+                    {selectedDownloadLabel}
+                  </button>
+                ) : null}
               </>
             ) : (
               <>
@@ -1495,7 +1504,9 @@ export function ToolShell({
               <p className="tool-shell__helper" id={progressHintId}>
                 {processingCount > 0
                   ? `${processingCount}개 파일을 현재 처리 중입니다.`
-                  : `성공한 결과는 바로 개별 다운로드하거나 ZIP으로 한 번에 받을 수 있습니다.`}
+                  : shouldPrioritizeZipDownload
+                    ? `성공한 결과가 여러 개면 ZIP으로 한 번에 받고, 필요한 경우 선택한 파일만 따로 내려받을 수 있습니다.`
+                    : `성공한 결과는 바로 개별 다운로드하거나 ZIP으로 한 번에 받을 수 있습니다.`}
               </p>
             </div>
           ) : null}
