@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { PageHero, PageLayout, PageSection } from "@/components/page-layout";
 import { guideRoutes, getToolRoute, toolRoutes } from "@/lib/site-content";
+import { isSiteIndexable } from "@/lib/site-config";
 import { createPageMetadata, getPageMetadataEntry } from "@/lib/site-metadata";
 
 export const metadata: Metadata = createPageMetadata(getPageMetadataEntry("/guides"));
@@ -20,9 +21,11 @@ export default function GuidesPage() {
           <Link className="button-link" href="/tools">
             도구 허브 보기
           </Link>
-          <Link className="button-muted" href="/rss.xml">
-            RSS 피드 열기
-          </Link>
+          {isSiteIndexable ? (
+            <Link className="button-muted" href="/rss.xml">
+              RSS 피드 열기
+            </Link>
+          ) : null}
         </div>
       </PageHero>
 

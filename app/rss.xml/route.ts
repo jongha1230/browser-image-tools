@@ -11,6 +11,16 @@ function escapeXml(value: string) {
 }
 
 export async function GET() {
+  if (!isSiteIndexable) {
+    return new Response("Not Found", {
+      status: 404,
+      headers: {
+        "content-type": "text/plain; charset=utf-8",
+        "x-robots-tag": "noindex, nofollow",
+      },
+    });
+  }
+
   const feedUrl = getAbsoluteSiteUrl("/rss.xml");
   const siteUrl = getAbsoluteSiteUrl("/guides");
   const latestUpdate = new Date(siteUpdatedAt).toUTCString();
@@ -44,7 +54,6 @@ export async function GET() {
     headers: {
       "content-type": "application/rss+xml; charset=utf-8",
       "cache-control": "public, max-age=0, must-revalidate",
-      ...(isSiteIndexable ? {} : { "x-robots-tag": "noindex, nofollow" }),
     },
   });
 }
