@@ -71,6 +71,10 @@ type QueueItemState = {
 };
 
 type ProcessingEngine = "worker" | "main";
+type SummaryRow = {
+  label: string;
+  value: string;
+};
 
 const stepLabels: Record<StepKey, string> = {
   upload: "파일 준비",
@@ -304,9 +308,13 @@ export function ToolShell({
     useState<ProcessingEngine>("main");
   const dragDepthRef = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const optionPanelRef = useRef<HTMLElement>(null);
+  const workflowSummaryRef = useRef<HTMLDivElement>(null);
   const runIdRef = useRef(0);
   const workerClientRef =
     useRef<ReturnType<typeof createImageProcessingWorkerClient> | null>(null);
+  const previousItemCountRef = useRef(0);
+  const previousHasResultsRef = useRef(false);
   const {
     addFiles,
     clearErrors,
@@ -422,6 +430,11 @@ export function ToolShell({
   const canDownloadZip =
     toolVariant !== null && successCount > 0 && !isProcessing && !isPreparingZip;
   const showProgress = toolVariant !== null && (isProcessing || hasResults);
+  const selectedItemState = selectedItem
+    ? (queueState[selectedItem.id] ?? { status: "queued" })
+    : null;
+  const selectedResult =
+    selectedItemState?.status === "success" ? selectedItemState.result ?? null : null;
   const dropzoneTitle = hasItems
     ? "이미지를 더 추가하거나 현재 큐를 조정하세요"
     : "이미지를 끌어 놓거나 파일 선택으로 여러 개 추가하세요";
@@ -451,6 +464,38 @@ export function ToolShell({
     items.length > 0
       ? `${completedCount}개 완료, ${successCount}개 성공, ${errorCount}개 실패`
       : "실행 대기";
+  const queueSummaryRows: SummaryRow[] = [
+    {
+      label: "준비 파일",
+      value: `${items.length}개`,
+    },
+    {
+      label: "총 업로드 용량",
+      value: hasItems ? formatFileSize(totalSize) : "0 B",
+    },
+    {
+      label: "성공 / 실패",
+      value: hasResults
+        ? `${successCount}개 / ${errorCount}개`
+        : items.length > 0
+          ? "실행 전"
+          : "아직 없음",
+    },
+  ];
+  const workflowStatusTone: QueueItemState["status"] = isProcessing
+    ? "processing"
+    : hasResults
+      ? successCount > 0
+        ? "success"
+        : "error"
+      : "queued";
+  const workflowStatusLabel = isProcessing
+    ? "처리 중"
+    : hasResults
+      ? successCount > 0
+        ? "결과 준비됨"
+        : "실패"
+      : "실행 대기";
 
   let previewPlan: ReturnType<typeof resolveImageProcessingPlan> | null = null;
 
@@ -464,6 +509,151 @@ export function ToolShell({
     } catch {
       previewPlan = null;
     }
+  }
+
+  const selectedSummaryRows: SummaryRow[] = [];
+  const selectedResultRows: SummaryRow[] = [];
+
+  if (selectedItem) {
+    selectedSummaryRows.push(
+      { label: "기준 파일", value: selectedItem.file.name },
+      {
+        label: "원본 형식",
+        value: selectedMimeType
+          ? getCompressionMimeTypeLabel(selectedMimeType)
+          : "확인 불가",
+      },
+    );
+
+    if (isCompressTool) {
+      selectedSummaryRows.push(
+        { label: "파일 크기", value: formatFileSize(selectedItem.file.size) },
+        {
+          label: "해상도",
+          value: referenceDimensions
+            ? formatDimensions(referenceDimensions)
+            : "읽는 중",
+        },
+        {
+          label: "예상 저장 이름",
+          value: previewPlan ? previewPlan.fileName : "형식 확인 필요",
+        },
+      );
+    } else if (isResizeTool) {
+      selectedSummaryRows.push(
+        {
+          label: "원본 해상도",
+          value: referenceDimensions
+            ? formatDimensions(referenceDimensions)
+            : "읽는 중",
+        },
+        {
+          label: "예상 출력",
+          value: previewPlan ? formatDimensions(previewPlan) : "입력 확인 필요",
+        },
+        {
+          label: "예상 저장 이름",
+          value: previewPlan ? previewPlan.fileName : "입력 확인 필요",
+        },
+      );
+    } else if (isConvertTool) {
+      selectedSummaryRows.push(
+        {
+          label: "해상도",
+          value: referenceDimensions
+            ? formatDimensions(referenceDimensions)
+            : "읽는 중",
+        },
+        {
+          label: "출력 형식",
+          value: getCompressionMimeTypeLabel(conversionOutputFormat),
+        },
+        {
+          label: "예상 저장 이름",
+          value: previewPlan ? previewPlan.fileName : "일부 파일은 실패 가능",
+        },
+      );
+    } else if (isRemoveExifTool) {
+      selectedSummaryRows.push(
+        {
+          label: "해상도",
+          value: referenceDimensions
+            ? formatDimensions(referenceDimensions)
+            : "읽는 중",
+        },
+        {
+          label: "예상 저장 이름",
+          value: previewPlan ? previewPlan.fileName : "형식 확인 필요",
+        },
+        {
+          label: "배치 범위",
+          value: `${items.length}개 파일`,
+        },
+      );
+    }
+  }
+
+  if (selectedItem && selectedResult) {
+    selectedResultRows.push(
+      { label: "저장 이름", value: selectedResult.fileName },
+      {
+        label: "출력 형식",
+        value: getCompressionMimeTypeLabel(selectedResult.mimeType),
+      },
+      { label: "결과 크기", value: formatFileSize(selectedResult.blob.size) },
+      { label: "해상도", value: formatDimensions(selectedResult) },
+    );
+
+    if (toolVariant === "resize") {
+      selectedResultRows.push({
+        label: "크기 비율",
+        value: formatResizeScaleSummary(
+          {
+            width: selectedResult.originalWidth,
+            height: selectedResult.originalHeight,
+          },
+          selectedResult,
+        ),
+      });
+    } else {
+      selectedResultRows.push({
+        label: toolVariant === "removeExif" ? "메타데이터" : "용량 변화",
+        value:
+          toolVariant === "removeExif"
+            ? "EXIF 제거용 재저장"
+            : formatCompressionSummary(
+                selectedItem.file.size,
+                selectedResult.blob.size,
+              ),
+      });
+    }
+
+    if (toolVariant === "convert") {
+      selectedResultRows.push({
+        label: "원본 형식",
+        value: selectedMimeType
+          ? getCompressionMimeTypeLabel(selectedMimeType)
+          : "확인 불가",
+      });
+    }
+  }
+
+  function focusWorkspaceRegion(node: HTMLElement | null) {
+    if (!node || typeof window === "undefined") {
+      return;
+    }
+
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    window.requestAnimationFrame(() => {
+      node.focus({ preventScroll: true });
+      node.scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
+    });
   }
 
   useEffect(() => {
@@ -585,6 +775,32 @@ export function ToolShell({
 
     setActiveStep("options");
   }, [hasResults, items.length]);
+
+  useEffect(() => {
+    if (!hasItems) {
+      previousItemCountRef.current = 0;
+      return;
+    }
+
+    if (previousItemCountRef.current === 0 && items.length > 0) {
+      focusWorkspaceRegion(optionPanelRef.current);
+    }
+
+    previousItemCountRef.current = items.length;
+  }, [hasItems, items.length]);
+
+  useEffect(() => {
+    if (!hasResults) {
+      previousHasResultsRef.current = false;
+      return;
+    }
+
+    if (!previousHasResultsRef.current) {
+      focusWorkspaceRegion(workflowSummaryRef.current);
+    }
+
+    previousHasResultsRef.current = true;
+  }, [hasResults]);
 
   function openFilePicker() {
     if (isProcessing) {
@@ -1045,6 +1261,157 @@ export function ToolShell({
     };
   }
 
+  function renderWorkflowSidebar() {
+    if (!selectedItem || !selectedItemState) {
+      return null;
+    }
+
+    const sidebarRows =
+      selectedResultRows.length > 0 ? selectedResultRows : queueSummaryRows;
+
+    return (
+      <section className="card tool-shell__workflow-sidebar">
+        <div className="tool-shell__workflow-section">
+          <div className="tool-shell__workflow-heading">
+            <h3>선택한 파일</h3>
+            <span
+              className="tool-shell__queue-status"
+              data-status={selectedItemState.status}
+            >
+              {getQueueStatusLabel(selectedItemState.status)}
+            </span>
+          </div>
+          <dl className="tool-shell__stat-list tool-shell__stat-list--compact">
+            {selectedSummaryRows.map((row) => (
+              <div key={row.label}>
+                <dt>{row.label}</dt>
+                <dd>{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+
+        <div
+          aria-atomic="true"
+          aria-live="polite"
+          className="tool-shell__workflow-section tool-shell__workflow-section--accent"
+          ref={workflowSummaryRef}
+          role="status"
+          tabIndex={-1}
+        >
+          <div className="tool-shell__workflow-heading">
+            <h3>{hasResults ? "결과와 저장" : "실행 준비"}</h3>
+            <span
+              className="tool-shell__queue-status"
+              data-status={workflowStatusTone}
+            >
+              {workflowStatusLabel}
+            </span>
+          </div>
+
+          <p className="tool-shell__helper">
+            {hasResults
+              ? `총 ${items.length}개 중 ${successCount}개 성공, ${errorCount}개 실패입니다.`
+              : isProcessing
+                ? `${items.length}개 파일을 순서대로 처리하고 있습니다.`
+                : statusByStep[activeStep]}
+          </p>
+
+          <div className="tool-shell__actions tool-shell__actions--stack">
+            {toolVariant ? (
+              <>
+                <button
+                  className={hasResults ? "button-muted" : "button-link"}
+                  disabled={!canProcess}
+                  onClick={handleProcessAll}
+                  type="button"
+                >
+                  {isProcessing ? "배치 처리 중..." : primaryActionLabel}
+                </button>
+                {selectedResult ? (
+                  <button
+                    className="button-link"
+                    onClick={() => handleDownloadResult(selectedItem.id)}
+                    type="button"
+                  >
+                    대표 결과 다운로드
+                  </button>
+                ) : null}
+                <button
+                  className={
+                    hasResults && !selectedResult ? "button-link" : "button-muted"
+                  }
+                  disabled={!canDownloadZip}
+                  onClick={handleDownloadZip}
+                  type="button"
+                >
+                  {isPreparingZip ? "ZIP 준비 중..." : "성공 파일 ZIP 다운로드"}
+                </button>
+              </>
+            ) : (
+              <>
+                <button className="button-link" disabled type="button">
+                  {primaryActionLabel}
+                </button>
+                <button className="button-muted" disabled type="button">
+                  배치 내보내기 연결 예정
+                </button>
+              </>
+            )}
+          </div>
+
+          {showProgress ? (
+            <div className="tool-shell__progress tool-shell__progress--compact">
+              <div className="tool-shell__progress-header">
+                <strong id={progressLabelId}>배치 진행률</strong>
+                <span>{`${completedCount}/${items.length} 완료`}</span>
+              </div>
+              <div
+                aria-describedby={progressHintId}
+                aria-labelledby={progressLabelId}
+                aria-valuemax={Math.max(items.length, 1)}
+                aria-valuemin={0}
+                aria-valuenow={completedCount}
+                aria-valuetext={progressValueText}
+                className="tool-shell__progress-bar"
+                role="progressbar"
+              >
+                <span style={{ width: `${progressPercent}%` }} />
+              </div>
+              <p className="tool-shell__helper" id={progressHintId}>
+                {processingCount > 0
+                  ? `${processingCount}개 파일을 현재 처리 중입니다.`
+                  : `성공한 결과는 바로 개별 다운로드하거나 ZIP으로 한 번에 받을 수 있습니다.`}
+              </p>
+            </div>
+          ) : null}
+
+          {selectedItemState.status === "processing" ? (
+            <p className="tool-shell__helper">
+              대표 파일을 처리하고 있습니다. 완료되면 이 영역에 결과 요약과
+              다운로드 버튼이 먼저 표시됩니다.
+            </p>
+          ) : null}
+
+          {selectedItemState.status === "error" ? (
+            <p className="tool-shell__helper tool-shell__helper--error">
+              {selectedItemState.errorMessage}
+            </p>
+          ) : null}
+
+          <dl className="tool-shell__stat-list tool-shell__stat-list--compact">
+            {sidebarRows.map((row) => (
+              <div key={row.label}>
+                <dt>{row.label}</dt>
+                <dd>{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section
       aria-busy={isProcessing || isPreparingZip}
@@ -1068,6 +1435,7 @@ export function ToolShell({
             aria-labelledby={dropzoneTitleId}
             className="tool-shell__dropzone"
             data-dragging={isDragging}
+            data-has-items={hasItems}
             onKeyDown={handleDropzoneKeyDown}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
@@ -1116,29 +1484,28 @@ export function ToolShell({
             </ul>
           </div>
 
-          <aside className="card tool-shell__overview-card">
+          <aside className="card tool-shell__overview-card" data-has-items={hasItems}>
             <h3>{hasItems ? "현재 큐 요약" : "빠른 시작"}</h3>
 
             {hasItems ? (
               <>
-                <div className="tool-shell__step-list" aria-label="작업 흐름">
-                  {Object.entries(stepLabels).map(([key, label]) => {
-                    const stepKey = key as StepKey;
-
-                    return (
-                      <button
-                        aria-controls={stepStatusId}
-                        aria-pressed={activeStep === stepKey}
-                        key={stepKey}
-                        className="tool-shell__step"
-                        data-active={activeStep === stepKey}
-                        onClick={() => setActiveStep(stepKey)}
-                        type="button"
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
+                <div className="tool-shell__overview-head">
+                  <div>
+                    <strong>{fileCountLabel}</strong>
+                    <p>
+                      {lastSource
+                        ? `${sourceLabels[lastSource]}로 최근 파일을 추가했습니다.`
+                        : "대표 파일과 옵션을 바로 이어서 확인하세요."}
+                    </p>
+                  </div>
+                  {selectedItemState ? (
+                    <span
+                      className="tool-shell__queue-status"
+                      data-status={selectedItemState.status}
+                    >
+                      {getQueueStatusLabel(selectedItemState.status)}
+                    </span>
+                  ) : null}
                 </div>
                 <div
                   aria-atomic="true"
@@ -1152,20 +1519,12 @@ export function ToolShell({
                 </div>
                 <dl className="tool-shell__stat-list tool-shell__stat-list--compact">
                   <div>
-                    <dt>준비 파일</dt>
-                    <dd>{items.length}개</dd>
-                  </div>
-                  <div>
                     <dt>총 업로드 용량</dt>
                     <dd>{formatFileSize(totalSize)}</dd>
                   </div>
                   <div>
-                    <dt>최근 추가 방법</dt>
-                    <dd>{lastSource ? sourceLabels[lastSource] : "아직 없음"}</dd>
-                  </div>
-                  <div>
                     <dt>성공 / 실패</dt>
-                    <dd>{`${successCount}개 / ${errorCount}개`}</dd>
+                    <dd>{hasResults ? `${successCount}개 / ${errorCount}개` : "실행 전"}</dd>
                   </div>
                   <div>
                     <dt>처리 엔진</dt>
@@ -1244,7 +1603,11 @@ export function ToolShell({
 
         {isCompressTool && selectedItem ? (
           <div className="detail-grid tool-shell__comparison-grid">
-            <section className="card tool-shell__option-card">
+            <section
+              className="card tool-shell__option-card"
+              ref={optionPanelRef}
+              tabIndex={-1}
+            >
               <h3>압축 옵션</h3>
 
               <label className="tool-shell__field" htmlFor="compress-output-format">
@@ -1296,45 +1659,17 @@ export function ToolShell({
               </p>
             </section>
 
-            <section className="card">
-              <h3>대표 원본 정보</h3>
-              <dl className="tool-shell__stat-list">
-                <div>
-                  <dt>기준 파일</dt>
-                  <dd>{selectedItem.file.name}</dd>
-                </div>
-                <div>
-                  <dt>원본 형식</dt>
-                  <dd>
-                    {selectedMimeType
-                      ? getCompressionMimeTypeLabel(selectedMimeType)
-                      : "확인 불가"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>파일 크기</dt>
-                  <dd>{formatFileSize(selectedItem.file.size)}</dd>
-                </div>
-                <div>
-                  <dt>해상도</dt>
-                  <dd>
-                    {referenceDimensions
-                      ? formatDimensions(referenceDimensions)
-                      : "읽는 중"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>예상 저장 이름</dt>
-                  <dd>{previewPlan ? previewPlan.fileName : "형식 확인 필요"}</dd>
-                </div>
-              </dl>
-            </section>
+            {renderWorkflowSidebar()}
           </div>
         ) : null}
 
         {isResizeTool && selectedItem ? (
           <div className="detail-grid tool-shell__comparison-grid">
-            <section className="card tool-shell__option-card">
+            <section
+              className="card tool-shell__option-card"
+              ref={optionPanelRef}
+              tabIndex={-1}
+            >
               <h3>크기 조절 옵션</h3>
 
               <div className="tool-shell__dimension-grid">
@@ -1432,47 +1767,17 @@ export function ToolShell({
               ) : null}
             </section>
 
-            <section className="card">
-              <h3>대표 원본 정보</h3>
-              <dl className="tool-shell__stat-list">
-                <div>
-                  <dt>기준 파일</dt>
-                  <dd>{selectedItem.file.name}</dd>
-                </div>
-                <div>
-                  <dt>원본 형식</dt>
-                  <dd>
-                    {selectedMimeType
-                      ? getCompressionMimeTypeLabel(selectedMimeType)
-                      : "확인 불가"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>원본 해상도</dt>
-                  <dd>
-                    {referenceDimensions
-                      ? formatDimensions(referenceDimensions)
-                      : "읽는 중"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>예상 출력</dt>
-                  <dd>
-                    {previewPlan ? formatDimensions(previewPlan) : "입력 확인 필요"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>예상 저장 이름</dt>
-                  <dd>{previewPlan ? previewPlan.fileName : "입력 확인 필요"}</dd>
-                </div>
-              </dl>
-            </section>
+            {renderWorkflowSidebar()}
           </div>
         ) : null}
 
         {isConvertTool && selectedItem ? (
           <div className="detail-grid tool-shell__comparison-grid">
-            <section className="card tool-shell__option-card">
+            <section
+              className="card tool-shell__option-card"
+              ref={optionPanelRef}
+              tabIndex={-1}
+            >
               <h3>포맷 변환 옵션</h3>
 
               <label className="tool-shell__field" htmlFor="convert-output-format">
@@ -1531,45 +1836,17 @@ export function ToolShell({
               ) : null}
             </section>
 
-            <section className="card">
-              <h3>대표 원본 정보</h3>
-              <dl className="tool-shell__stat-list">
-                <div>
-                  <dt>기준 파일</dt>
-                  <dd>{selectedItem.file.name}</dd>
-                </div>
-                <div>
-                  <dt>원본 형식</dt>
-                  <dd>
-                    {selectedMimeType
-                      ? getCompressionMimeTypeLabel(selectedMimeType)
-                      : "확인 불가"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>해상도</dt>
-                  <dd>
-                    {referenceDimensions
-                      ? formatDimensions(referenceDimensions)
-                      : "읽는 중"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>출력 형식</dt>
-                  <dd>{getCompressionMimeTypeLabel(conversionOutputFormat)}</dd>
-                </div>
-                <div>
-                  <dt>예상 저장 이름</dt>
-                  <dd>{previewPlan ? previewPlan.fileName : "일부 파일은 실패 가능"}</dd>
-                </div>
-              </dl>
-            </section>
+            {renderWorkflowSidebar()}
           </div>
         ) : null}
 
         {isRemoveExifTool && selectedItem ? (
           <div className="detail-grid tool-shell__comparison-grid">
-            <section className="card tool-shell__option-card">
+            <section
+              className="card tool-shell__option-card"
+              ref={optionPanelRef}
+              tabIndex={-1}
+            >
               <h3>메타데이터 제거 안내</h3>
               <p>
                 이 도구는 큐 안의 이미지를 같은 형식으로 다시 저장해 공유 전에
@@ -1586,99 +1863,7 @@ export function ToolShell({
               </p>
             </section>
 
-            <section className="card">
-              <h3>대표 원본 정보</h3>
-              <dl className="tool-shell__stat-list">
-                <div>
-                  <dt>기준 파일</dt>
-                  <dd>{selectedItem.file.name}</dd>
-                </div>
-                <div>
-                  <dt>원본 형식</dt>
-                  <dd>
-                    {selectedMimeType
-                      ? getCompressionMimeTypeLabel(selectedMimeType)
-                      : "확인 불가"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>해상도</dt>
-                  <dd>
-                    {referenceDimensions
-                      ? formatDimensions(referenceDimensions)
-                      : "읽는 중"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>예상 저장 이름</dt>
-                  <dd>{previewPlan ? previewPlan.fileName : "형식 확인 필요"}</dd>
-                </div>
-                <div>
-                  <dt>배치 범위</dt>
-                  <dd>{items.length}개 파일에 동일한 재저장 흐름 적용</dd>
-                </div>
-              </dl>
-            </section>
-          </div>
-        ) : null}
-
-        {hasItems ? (
-          <div className="tool-shell__actions">
-            {toolVariant ? (
-              <>
-                <button
-                  className="button-link"
-                  disabled={!canProcess}
-                  onClick={handleProcessAll}
-                  type="button"
-                >
-                  {isProcessing ? "배치 처리 중..." : primaryActionLabel}
-                </button>
-                <button
-                  className="button-muted"
-                  disabled={!canDownloadZip}
-                  onClick={handleDownloadZip}
-                  type="button"
-                >
-                  {isPreparingZip ? "ZIP 준비 중..." : "성공 파일 ZIP 다운로드"}
-                </button>
-              </>
-            ) : (
-              <>
-                <button className="button-link" disabled type="button">
-                  {primaryActionLabel}
-                </button>
-                <button className="button-muted" disabled type="button">
-                  배치 내보내기 연결 예정
-                </button>
-              </>
-            )}
-          </div>
-        ) : null}
-
-        {showProgress ? (
-          <div className="tool-shell__progress">
-            <div className="tool-shell__progress-header">
-              <strong id={progressLabelId}>배치 진행률</strong>
-              <span>{`${completedCount}/${items.length} 완료`}</span>
-            </div>
-            <div
-              aria-describedby={progressHintId}
-              aria-labelledby={progressLabelId}
-              aria-valuemax={Math.max(items.length, 1)}
-              aria-valuemin={0}
-              aria-valuenow={completedCount}
-              aria-valuetext={progressValueText}
-              className="tool-shell__progress-bar"
-              role="progressbar"
-            >
-              <span style={{ width: `${progressPercent}%` }} />
-            </div>
-            <p className="tool-shell__helper" id={progressHintId}>
-              {processingCount > 0
-                ? `${processingCount}개 파일을 현재 처리 중입니다. 성공한 파일만 ZIP에 묶어 다운로드할 수 있습니다.`
-                : `부분 실패가 있어도 성공한 파일은 바로 개별 다운로드하거나 ZIP으로 한 번에 받을 수 있습니다.`}
-            </p>
+            {renderWorkflowSidebar()}
           </div>
         ) : null}
 
@@ -1690,7 +1875,11 @@ export function ToolShell({
                 getSupportedImageMimeType(item.file) ?? "image/jpeg";
 
               return (
-                <article className="card tool-shell__preview-card" key={item.id}>
+                <article
+                  className="card tool-shell__preview-card"
+                  data-primary={item.id === selectedItemId}
+                  key={item.id}
+                >
                   <div className="tool-shell__preview-media">
                     <Image
                       alt={`${item.file.name} 미리보기`}
@@ -1710,8 +1899,10 @@ export function ToolShell({
                         {getQueueStatusLabel(itemState.status)}
                       </span>
                     </div>
-                    <p>{item.typeLabel}</p>
-                    <p>{formatFileSize(item.file.size)}</p>
+                    <p>{`${item.typeLabel} · ${formatFileSize(item.file.size)}`}</p>
+                    {item.id === selectedItemId ? (
+                      <p className="tool-shell__preview-badge">현재 기준 파일</p>
+                    ) : null}
                   </div>
 
                   {itemState.status === "processing" ? (
@@ -1728,7 +1919,7 @@ export function ToolShell({
                   ) : null}
 
                   {itemState.status === "success" && itemState.result ? (
-                    <dl className="tool-shell__stat-list tool-shell__queue-result">
+                    <dl className="tool-shell__stat-list tool-shell__stat-list--compact tool-shell__queue-result">
                       <div>
                         <dt>저장 이름</dt>
                         <dd>{itemState.result.fileName}</dd>
