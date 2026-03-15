@@ -26,6 +26,10 @@ Routing rules:
 - `/guides/why-converted-images-get-larger`
 - `/guides/batch-processing-preflight-checklist`
 - `/guides/browser-local-image-processing-limits`
+- `/guides/blog-cms-image-prep-checklist`
+- `/guides/product-thumbnail-image-settings`
+- `/guides/avoid-repeat-export-quality-loss`
+- `/guides/when-png-is-the-wrong-choice`
 - `/guides/image-compression-basics`
 - `/guides/webp-vs-jpeg-vs-png`
 - `/guides/remove-exif-for-privacy`
@@ -136,6 +140,38 @@ Purpose:
 - explain the realistic limits of browser-only image processing
 - set expectations for large files, large batches, and browser behavior
 - reinforce the local-processing promise without overstating it
+
+### `/guides/blog-cms-image-prep-checklist`
+
+Purpose:
+
+- explain how to separate representative images, inline images, and captures before blog or CMS upload
+- help users decide when resize, compression, and format conversion should happen before publishing
+- connect publishing workflows back to the current tool routes without adding new features
+
+### `/guides/product-thumbnail-image-settings`
+
+Purpose:
+
+- explain how to prepare consistent thumbnail and list images for product pages
+- help users separate list-image settings from zoom or detail-image settings
+- connect resizing, compression, and conversion decisions to batch-ready shopping workflows
+
+### `/guides/avoid-repeat-export-quality-loss`
+
+Purpose:
+
+- explain why repeated export cycles degrade image quality
+- help users keep a safer master-and-derivatives workflow
+- connect quality-preservation advice to the current resize, compression, and conversion tools
+
+### `/guides/when-png-is-the-wrong-choice`
+
+Purpose:
+
+- explain when PNG is not the most practical output format
+- help users compare PNG against JPEG and WebP for photos, thumbnails, and uploads
+- connect format tradeoffs back to the current conversion and compression tools
 
 ### `/about`
 

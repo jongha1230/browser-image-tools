@@ -31,6 +31,10 @@ describe("site content scaffold", () => {
       "/guides/why-converted-images-get-larger",
       "/guides/batch-processing-preflight-checklist",
       "/guides/browser-local-image-processing-limits",
+      "/guides/blog-cms-image-prep-checklist",
+      "/guides/product-thumbnail-image-settings",
+      "/guides/avoid-repeat-export-quality-loss",
+      "/guides/when-png-is-the-wrong-choice",
       "/guides/image-compression-basics",
       "/guides/webp-vs-jpeg-vs-png",
       "/guides/remove-exif-for-privacy",
@@ -83,6 +87,10 @@ describe("site content scaffold", () => {
       "/guides/why-converted-images-get-larger",
       "/guides/batch-processing-preflight-checklist",
       "/guides/browser-local-image-processing-limits",
+      "/guides/blog-cms-image-prep-checklist",
+      "/guides/product-thumbnail-image-settings",
+      "/guides/avoid-repeat-export-quality-loss",
+      "/guides/when-png-is-the-wrong-choice",
       "/guides/image-compression-basics",
       "/guides/webp-vs-jpeg-vs-png",
       "/guides/remove-exif-for-privacy",
@@ -106,6 +114,8 @@ describe("site content scaffold", () => {
         ),
       ).toBe(true);
     }
+
+    expect(guideRoutes.filter((guide) => guide.cluster === "cluster-02")).toHaveLength(4);
   });
 
   it("covers every current route with unique metadata", () => {
