@@ -23,12 +23,15 @@ export default function RemoveExifPage() {
         { label: tool.shortLabel },
       ]}
     >
-      <PageHero eyebrow="Remove EXIF" title={tool.title}>
+      <PageHero eyebrow="EXIF 제거 도구" title={tool.title}>
         <p>
-          {tool.description} {tool.intro} 여러 이미지를 브라우저 안에서 같은
-          형식으로 다시 저장해 GPS 위치, 기기 모델, 촬영 시각 같은 메타데이터
-          노출 가능성을 줄이고 성공한 결과를 ZIP으로 한 번에 다운로드할 수
-          있습니다.
+          사진을 공유하거나 업로드하기 전에 위치, 기기, 촬영 시각 같은
+          메타데이터를 정리하고 싶을 때 쓰는 도구입니다. 여러 장을 한 번에 같은
+          형식으로 다시 저장해 공유 전에 점검할 수 있습니다.
+        </p>
+        <p>
+          처리와 저장 준비는 현재 브라우저 안에서만 이뤄지며, 필요한 결과만 골라
+          내려받을 수 있습니다.
         </p>
         <div className="hero__actions">
           <a className="button-link" href={`#${workspaceId}`}>
@@ -42,14 +45,14 @@ export default function RemoveExifPage() {
 
       <ToolShell
         title={tool.title}
-        description="여러 이미지를 로컬에서 같은 형식으로 다시 저장해 EXIF 메타데이터 노출 가능성을 줄이고, 성공한 결과를 개별 또는 ZIP으로 다운로드합니다."
+        description="여러 이미지를 브라우저 안에서 같은 형식으로 다시 저장해 EXIF 메타데이터를 정리하고 결과를 개별 저장 또는 ZIP 다운로드합니다."
         primaryActionLabel="EXIF 제거하기"
         sectionId={workspaceId}
         variant="removeExif"
       />
 
       <PageSection
-        title="EXIF가 무엇이고 왜 확인해야 하는가"
+        title="공유 전에 EXIF를 확인하는 이유"
         intro={
           <p>
             사진 파일에는 픽셀 데이터 외에 촬영 환경을 설명하는 메타데이터가
@@ -109,12 +112,12 @@ export default function RemoveExifPage() {
         </ul>
       </PageSection>
 
-      <PageSection title="현재 범위와 안내">
+      <PageSection title="작업 전에 확인할 점">
         <ul className="chip-list">
-          <li>업로드한 여러 파일을 같은 형식으로 다시 저장해 메타데이터 제거 흐름을 일괄 적용합니다.</li>
+          <li>업로드한 여러 파일을 원본과 같은 형식으로 다시 저장해 메타데이터 정리 흐름을 일괄 적용합니다.</li>
           <li>원본 파일명, 형식, 용량, 해상도와 예상 저장 이름을 먼저 확인할 수 있습니다.</li>
-          <li>위치, 기기, 촬영 시각처럼 민감할 수 있는 메타데이터 제거 목적을 화면에 명시합니다.</li>
-          <li>파일별 성공과 실패를 구분해 보여 주고 성공한 결과만 ZIP으로 저장합니다.</li>
+          <li>위치, 기기, 촬영 시각처럼 민감할 수 있는 메타데이터를 줄이는 용도로 사용할 수 있습니다.</li>
+          <li>파일별 성공과 실패를 구분해 보여 주고 성공한 결과만 저장할 수 있습니다.</li>
         </ul>
       </PageSection>
 
@@ -122,8 +125,8 @@ export default function RemoveExifPage() {
         title="이 도구에서 바로 확인할 수 있는 것"
         intro={
           <p>
-            아래 작업 패널에서 실제 EXIF 제거용 재저장을 실행하고, 결과 미리보기
-            및 다운로드용 파일 정보를 같은 페이지에서 바로 확인할 수 있습니다.
+            작업 패널에서 실제 EXIF 제거용 재저장을 실행하고, 결과 미리보기와
+            다운로드용 파일 정보를 같은 페이지에서 바로 확인할 수 있습니다.
           </p>
         }
       >
@@ -135,22 +138,22 @@ export default function RemoveExifPage() {
           <div className="card">
             <h3>개인정보 안내</h3>
             <p>
-              위치, 기기 모델, 촬영 시각 같은 정보가 제거 대상이 될 수 있다는 점을
+              위치, 기기 모델, 촬영 시각 같은 정보가 정리 대상이 될 수 있다는 점을
               실행 전에 안내합니다.
             </p>
           </div>
           <div className="card">
             <h3>결과 정보</h3>
             <p>
-              결과 파일명, 출력 형식, 파일 크기, 해상도를 확인한 뒤 개별 또는
-              ZIP으로 다운로드할 수 있습니다.
+              결과 파일명, 출력 형식, 파일 크기, 해상도를 확인한 뒤 필요한 결과만
+              내려받을 수 있습니다.
             </p>
           </div>
           <div className="card">
             <h3>오류 처리</h3>
             <p>
-              지원하지 않는 형식과 브라우저 재저장 실패, 부분 실패 결과를 모두
-              사용자 메시지로 안내합니다.
+              지원하지 않는 형식과 브라우저 재저장 실패, 부분 실패 결과를 사용자
+              메시지로 안내합니다.
             </p>
           </div>
         </div>

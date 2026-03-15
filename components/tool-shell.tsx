@@ -201,22 +201,22 @@ function getResizeDimensionValue(value: string) {
 
 function getVariantLabel(variant: ToolShellVariant) {
   if (variant === "compress") {
-    return "브라우저 로컬 배치 압축 활성화";
+    return "배치 이미지 압축";
   }
 
   if (variant === "resize") {
-    return "브라우저 로컬 배치 리사이즈 활성화";
+    return "배치 이미지 크기 조절";
   }
 
   if (variant === "convert") {
-    return "브라우저 로컬 배치 포맷 변환 활성화";
+    return "배치 이미지 포맷 변환";
   }
 
   if (variant === "removeExif") {
-    return "브라우저 로컬 배치 EXIF 제거 활성화";
+    return "배치 EXIF 정리";
   }
 
-  return "브라우저 로컬 업로드 활성화";
+  return "이미지 업로드";
 }
 
 function getQueueStatusLabel(status: QueueItemState["status"]) {
@@ -254,11 +254,11 @@ function getDropzoneCopy(
   replaceOnNextAdd: boolean,
 ) {
   if (replaceOnNextAdd) {
-    return "다음 파일 추가 시 현재 단일 작업 자동 교체";
+    return "다음 파일을 추가하면 현재 단일 작업이 자동으로 바뀝니다";
   }
 
   if (variant === "compress") {
-    return "같은 품질과 출력 형식을 큐 전체에 일괄 적용";
+    return "선택한 품질과 형식을 모든 파일에 같은 기준으로 적용";
   }
 
   if (variant === "resize") {
@@ -269,15 +269,15 @@ function getDropzoneCopy(
 
   if (variant === "convert") {
     return skippedConvertCount > 0
-      ? `${skippedConvertCount}개 파일은 원본과 같은 형식을 선택하면 실패로 표시`
-      : "선택한 출력 형식을 큐 전체에 일괄 적용";
+      ? `${skippedConvertCount}개 파일은 현재 선택과 형식이 같아 변환 없이 실패로 표시`
+      : "선택한 출력 형식으로 여러 파일을 한 번에 변환";
   }
 
   if (variant === "removeExif") {
-    return "같은 형식으로 다시 저장해 큐 전체의 메타데이터 노출 가능성 축소";
+    return "원본 형식으로 다시 저장해 메타데이터를 한 번에 정리";
   }
 
-  return "이후 도구 페이지에서도 같은 업로드 상태 재사용 가능";
+  return "현재 업로드 상태를 다른 도구에서도 이어서 사용할 수 있습니다";
 }
 
 export function ToolShell({
@@ -1302,8 +1302,8 @@ export function ToolShell({
     statusByStep = {
       upload:
         items.length > 0
-          ? `${items.length}개 파일이 준비되었습니다. 같은 출력 형식과 품질을 전체 큐에 한 번에 적용하며 모든 파일은 현재 브라우저 탭 안에서만 처리됩니다.`
-          : `JPEG, PNG, WebP 이미지를 여러 개 추가하면 이 페이지에서 바로 배치 압축과 ZIP 다운로드까지 진행할 수 있습니다.`,
+          ? `${items.length}개 파일이 준비되었습니다. 같은 압축 기준을 한 번에 적용하고 결과는 이 브라우저 안에서만 생성됩니다.`
+          : "JPEG, PNG, WebP 이미지를 여러 개 추가하면 바로 압축을 시작할 수 있습니다.",
       options:
         items.length > 0 && targetMimeType
           ? `${items.length}개 파일에 ${getCompressionMimeTypeLabel(targetMimeType)} 형식과 ${
@@ -1316,15 +1316,15 @@ export function ToolShell({
           : "먼저 압축할 이미지를 추가하면 배치 품질과 출력 형식을 선택할 수 있습니다.",
       export:
         hasResults
-          ? `총 ${items.length}개 중 ${successCount}개 성공, ${errorCount}개 실패입니다. 성공한 결과만 개별 다운로드와 ZIP 내보내기에 포함됩니다.`
-          : "압축을 실행하면 파일별 성공/실패 상태와 ZIP 내보내기 준비 여부를 이 단계에서 확인할 수 있습니다.",
+          ? `총 ${items.length}개 중 ${successCount}개 압축 완료, ${errorCount}개 실패입니다. 성공한 결과만 개별 저장하거나 ZIP으로 받을 수 있습니다.`
+          : "압축을 실행하면 파일별 결과와 다운로드 가능 상태를 이 단계에서 확인할 수 있습니다.",
     };
   } else if (isResizeTool) {
     statusByStep = {
       upload:
         items.length > 0
-          ? `${items.length}개 파일이 준비되었습니다. 같은 박스 크기를 큐 전체에 적용하고 비율 유지 여부에 따라 각 파일을 개별 계산합니다.`
-          : `JPEG, PNG, WebP 이미지를 여러 개 추가하면 이 페이지에서 바로 배치 리사이즈와 ZIP 다운로드까지 진행할 수 있습니다.`,
+          ? `${items.length}개 파일이 준비되었습니다. 목표 크기를 기준으로 각 파일을 계산하며 비율 유지 여부에 따라 결과 해상도가 달라집니다.`
+          : "JPEG, PNG, WebP 이미지를 여러 개 추가하면 바로 크기 조절을 시작할 수 있습니다.",
       options:
         items.length > 0 && resizeTargetDimensions
           ? `${items.length}개 파일을 ${formatDimensions(resizeTargetDimensions)} 기준으로 저장합니다. 비율 잠금은 ${
@@ -1335,15 +1335,15 @@ export function ToolShell({
             : "먼저 리사이즈할 이미지를 추가하면 배치 가로·세로 값과 비율 잠금 옵션을 선택할 수 있습니다.",
       export:
         hasResults
-          ? `총 ${items.length}개 중 ${successCount}개 성공, ${errorCount}개 실패입니다. 성공한 결과만 개별 다운로드와 ZIP 내보내기에 포함됩니다.`
-          : "크기 조절을 실행하면 파일별 성공/실패 상태와 ZIP 내보내기 준비 여부를 이 단계에서 확인할 수 있습니다.",
+          ? `총 ${items.length}개 중 ${successCount}개 크기 조절 완료, ${errorCount}개 실패입니다. 성공한 결과만 개별 저장하거나 ZIP으로 받을 수 있습니다.`
+          : "크기 조절을 실행하면 파일별 결과와 다운로드 가능 상태를 이 단계에서 확인할 수 있습니다.",
     };
   } else if (isConvertTool) {
     statusByStep = {
       upload:
         items.length > 0
-          ? `${items.length}개 파일이 준비되었습니다. 선택한 출력 형식을 전체 큐에 적용하며 원본과 같은 형식인 파일은 개별 실패로 분리해 표시합니다.`
-          : `JPEG, PNG, WebP 이미지를 여러 개 추가하면 이 페이지에서 바로 배치 변환과 ZIP 다운로드까지 진행할 수 있습니다.`,
+          ? `${items.length}개 파일이 준비되었습니다. 선택한 형식으로 한 번에 변환하며 원본과 같은 형식인 파일은 따로 실패로 표시합니다.`
+          : "JPEG, PNG, WebP 이미지를 여러 개 추가하면 바로 포맷 변환을 시작할 수 있습니다.",
       options:
         items.length > 0
           ? `${items.length}개 파일에 ${getCompressionMimeTypeLabel(conversionOutputFormat)} 출력 형식을 적용합니다. ${
@@ -1352,23 +1352,23 @@ export function ToolShell({
           : "먼저 변환할 이미지를 추가하면 출력 형식과 품질을 선택할 수 있습니다.",
       export:
         hasResults
-          ? `총 ${items.length}개 중 ${successCount}개 성공, ${errorCount}개 실패입니다. 성공한 결과만 개별 다운로드와 ZIP 내보내기에 포함됩니다.`
-          : "포맷 변환을 실행하면 파일별 성공/실패 상태와 ZIP 내보내기 준비 여부를 이 단계에서 확인할 수 있습니다.",
+          ? `총 ${items.length}개 중 ${successCount}개 변환 완료, ${errorCount}개 실패입니다. 성공한 결과만 개별 저장하거나 ZIP으로 받을 수 있습니다.`
+          : "포맷 변환을 실행하면 파일별 결과와 다운로드 가능 상태를 이 단계에서 확인할 수 있습니다.",
     };
   } else if (isRemoveExifTool) {
     statusByStep = {
       upload:
         items.length > 0
-          ? `${items.length}개 파일이 준비되었습니다. 각 파일을 같은 형식으로 다시 저장해 EXIF 메타데이터 노출 가능성을 줄이고 결과는 브라우저 안에서만 유지합니다.`
-          : `JPEG, PNG, WebP 이미지를 여러 개 추가하면 이 페이지에서 바로 배치 EXIF 제거와 ZIP 다운로드까지 진행할 수 있습니다.`,
+          ? `${items.length}개 파일이 준비되었습니다. 원본 형식으로 다시 저장해 공유 전 메타데이터를 정리합니다.`
+          : "JPEG, PNG, WebP 이미지를 여러 개 추가하면 바로 EXIF 정리를 시작할 수 있습니다.",
       options:
         items.length > 0
-          ? `${items.length}개 파일을 원본과 같은 형식으로 다시 저장합니다. 성공한 결과는 GPS 위치, 기기, 촬영 시각 같은 메타데이터 제거용 재저장 흐름으로 묶어 관리합니다.`
-          : "먼저 EXIF를 정리할 이미지를 추가하면 배치 동작과 현재 제한을 확인할 수 있습니다.",
+          ? `${items.length}개 파일을 원본과 같은 형식으로 다시 저장합니다. GPS 위치, 기기, 촬영 시각 같은 정보가 함께 정리될 수 있습니다.`
+          : "먼저 EXIF를 정리할 이미지를 추가하면 처리 방식과 현재 제한을 확인할 수 있습니다.",
       export:
         hasResults
-          ? `총 ${items.length}개 중 ${successCount}개 성공, ${errorCount}개 실패입니다. 성공한 결과만 개별 다운로드와 ZIP 내보내기에 포함됩니다.`
-          : "EXIF 제거를 실행하면 파일별 성공/실패 상태와 ZIP 내보내기 준비 여부를 이 단계에서 확인할 수 있습니다.",
+          ? `총 ${items.length}개 중 ${successCount}개 정리 완료, ${errorCount}개 실패입니다. 성공한 결과만 개별 저장하거나 ZIP으로 받을 수 있습니다.`
+          : "EXIF 정리를 실행하면 파일별 결과와 다운로드 가능 상태를 이 단계에서 확인할 수 있습니다.",
     };
   } else {
     statusByStep = {
@@ -1809,8 +1809,8 @@ export function ToolShell({
               </label>
 
               <p className="tool-shell__helper">
-                같은 품질과 출력 형식이 현재 큐 전체에 한 번에 적용됩니다. 성공한
-                파일만 ZIP으로 함께 내려받을 수 있습니다.
+                선택한 품질과 출력 형식이 모든 파일에 동일하게 적용됩니다. 결과는
+                개별 저장하거나 ZIP으로 묶어 받을 수 있습니다.
               </p>
             </section>
 
@@ -1908,8 +1908,8 @@ export function ToolShell({
               </div>
 
               <p className="tool-shell__helper">
-                같은 입력값을 큐 전체에 적용하지만, 비율 유지가 켜져 있으면 각
-                파일의 원본 비율에 맞춰 개별 결과 크기가 달라질 수 있습니다.
+                입력한 크기는 모든 파일에 공통으로 적용됩니다. 비율 유지를 켜면
+                실제 저장 크기는 파일마다 조금씩 달라질 수 있습니다.
               </p>
 
               {resizeValidationMessage ? (
@@ -2004,13 +2004,13 @@ export function ToolShell({
             >
               <h3>메타데이터 제거 안내</h3>
               <p>
-                이 도구는 큐 안의 이미지를 같은 형식으로 다시 저장해 공유 전에
-                위치, 기기, 촬영 시각 같은 EXIF 메타데이터 노출 가능성을 줄입니다.
+                업로드한 이미지를 원본 형식으로 다시 저장해 공유 전에 위치, 기기,
+                촬영 시각 같은 EXIF 정보를 정리하는 방식입니다.
               </p>
               <ul className="chip-list">
-                <li>GPS 위치 정보 제거 가능</li>
-                <li>기기 모델 및 촬영 설정 제거 가능</li>
-                <li>성공한 파일만 ZIP으로 함께 저장</li>
+                <li>GPS 위치 정보 정리 가능</li>
+                <li>기기 모델 및 촬영 설정 정리 가능</li>
+                <li>필요한 결과만 골라 저장 가능</li>
               </ul>
               <p className="tool-shell__helper">
                 처리 방식은 재인코딩 기반이므로 일부 앱 전용 메타데이터도 함께

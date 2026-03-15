@@ -12,17 +12,17 @@ export const metadata: Metadata = createPageMetadata(
 export default function ToolsPage() {
   return (
     <PageLayout breadcrumbs={[{ href: "/", label: "홈" }, { label: "도구" }]}>
-      <PageHero eyebrow="Tools Hub" title="이미지 작업을 실제 라우트로 분리한 도구 허브">
+      <PageHero eyebrow="도구 모음" title="필요한 작업만 골라 바로 처리하는 이미지 도구">
         <p>
-          각 도구는 고유 메타데이터와 초기 설명 콘텐츠를 가진 독립 페이지로
-          구성했습니다. 현재는 각 라우트에서 로컬 업로드, 배치 처리, ZIP
-          내보내기까지 바로 사용할 수 있습니다.
+          압축, 크기 조절, 형식 변환, EXIF 제거를 각각 독립 페이지로 제공해
+          필요한 작업만 바로 열 수 있습니다. 모든 처리와 저장 준비는 현재
+          브라우저 안에서 이뤄집니다.
         </p>
       </PageHero>
 
       <PageSection
         title="현재 제공 중인 도구"
-        intro={<p>도구 인덱스는 표준 링크만 사용해 검색 엔진과 사용자 모두가 바로 이동할 수 있게 유지합니다.</p>}
+        intro={<p>어떤 작업이 필요한지 먼저 고르고, 각 페이지에서 바로 실행하면 됩니다.</p>}
       >
         <div className="card-grid">
           {toolRoutes.map((tool) => (
@@ -37,18 +37,18 @@ export default function ToolsPage() {
         </div>
       </PageSection>
 
-      <PageSection title="운영 준비와 다음 단계">
+      <PageSection title="이럴 때 바로 쓰면 좋습니다">
         <ul className="list-reset">
-          <li>배포 전 체크리스트와 검색 등록 절차를 기준으로 운영 점검 이어가기</li>
-          <li>도구별 옵션 프리셋 세분화와 저장 규칙 보강</li>
-          <li>광고 슬롯 배치와 성능 측정</li>
-          <li>대용량 파일 대응을 위한 추가 워커 최적화</li>
+          <li>업로드 용량이 부담되면 이미지 압축으로 파일 크기를 먼저 줄입니다.</li>
+          <li>썸네일이나 문서 규격을 맞춰야 하면 이미지 크기 조절을 사용합니다.</li>
+          <li>서비스 호환성이나 투명 배경 유지가 중요하면 이미지 포맷 변환을 엽니다.</li>
+          <li>공유 전 위치나 기기 정보가 신경 쓰이면 EXIF 제거를 먼저 실행합니다.</li>
         </ul>
       </PageSection>
 
       <PageSection
         title="도구 전에 읽어두면 좋은 가이드"
-        intro={<p>각 도구에서 자주 묻는 판단 기준을 가이드 문서로 분리해 두었습니다.</p>}
+        intro={<p>헷갈리는 경우에는 관련 가이드를 먼저 보고 바로 도구로 넘어갈 수 있습니다.</p>}
       >
         <div className="card-grid">
           {guideRoutes.map((guide) => (

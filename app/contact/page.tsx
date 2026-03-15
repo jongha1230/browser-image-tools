@@ -10,15 +10,14 @@ export const metadata: Metadata = createPageMetadata(getPageMetadataEntry("/cont
 export default function ContactPage() {
   return (
     <PageLayout breadcrumbs={[{ href: "/", label: "홈" }, { label: "문의" }]}>
-      <PageHero eyebrow="Contact" title="버그 제보, 운영 문의, 광고 제휴 문의 전 확인할 안내">
+      <PageHero eyebrow="문의 안내" title="문제가 생겼을 때 빠르게 확인할 수 있는 문의 안내">
         <p>
-          현재는 별도 문의 폼이나 백엔드 없이 운영되므로, 정식 채널이 확정되기
-          전까지는 공개 저장소 이슈와 정책 페이지를 기준으로 문의 흐름을
-          안내합니다.
+          현재는 별도 문의 폼 없이 GitHub 이슈를 기본 연락 창구로 사용합니다.
+          버그 제보나 지원 범위 문의를 남기면 확인 가능한 정보부터 검토합니다.
         </p>
         <p>
-          원본 파일 업로드를 요구하지 않는 방향을 우선하며, 재현 가능한 정보와
-          환경 설명을 함께 보내 주면 검토가 훨씬 빨라집니다.
+          민감한 원본 파일을 보내기보다는 브라우저 버전, 재현 단계, 오류 메시지
+          같은 정보를 먼저 정리해 주는 편이 훨씬 도움이 됩니다.
         </p>
         <div className="hero__actions">
           <a
@@ -36,8 +35,8 @@ export default function ContactPage() {
       </PageHero>
 
       <PageSection
-        title="어떤 문의를 받는가"
-        intro={<p>현재 페이지는 최소한의 연락 지점이 아니라, 문의 유형과 준비 항목을 먼저 설명하는 역할을 합니다.</p>}
+        title="어떤 문의에 적합한가"
+        intro={<p>원본 파일 공유 없이도 대부분의 문제는 아래 정보만으로 먼저 확인할 수 있습니다.</p>}
       >
         <div className="detail-grid">
           <div className="card">
@@ -45,12 +44,12 @@ export default function ContactPage() {
             <p>특정 브라우저에서 파일 업로드, 미리보기, 처리, ZIP 다운로드가 실패하는 경우를 받습니다.</p>
           </div>
           <div className="card">
-            <h3>운영 문의</h3>
-            <p>지원 형식, 로컬 처리 방식, 정책 문구, 배포 계획처럼 서비스 범위에 대한 문의를 받습니다.</p>
+            <h3>지원 범위 문의</h3>
+            <p>지원 형식, 로컬 처리 방식, 개인정보 안내처럼 현재 서비스 범위에 대한 문의를 받습니다.</p>
           </div>
           <div className="card">
-            <h3>광고·제휴 문의</h3>
-            <p>광고 슬롯 운영, 정책 고지, 제휴 가능성처럼 실제 운영 준비와 관련된 문의를 구분해 확인합니다.</p>
+            <h3>제휴 및 운영 문의</h3>
+            <p>정식 채널이 준비되기 전까지는 공개 저장소를 통해 확인 가능한 범위에서 먼저 답변합니다.</p>
           </div>
         </div>
       </PageSection>
@@ -64,12 +63,12 @@ export default function ContactPage() {
         </ul>
       </PageSection>
 
-      <PageSection title="현재 운영 원칙">
+      <PageSection title="현재 연락 방식">
         <ul className="list-reset">
-          <li>정식 지원 메일과 폼이 준비되면 이 페이지에 우선 공개합니다.</li>
+          <li>정식 지원 메일이나 폼이 준비되면 이 페이지에 우선 공개합니다.</li>
           <li>문의 과정에서 원본 업로드를 기본 절차로 요구하지 않습니다.</li>
-          <li>광고 관련 문의도 실제 퍼블리셔 정보가 준비되기 전에는 임시 식별자나 가상 자료를 제공하지 않습니다.</li>
-          <li>정책과 지원 범위가 바뀌면 소개, 개인정보, 가이드 페이지와 함께 이 페이지도 갱신합니다.</li>
+          <li>광고나 제휴 관련 정보도 실제로 확정된 내용만 안내합니다.</li>
+          <li>지원 범위가 바뀌면 소개, 개인정보, 가이드 페이지와 함께 이 페이지도 갱신합니다.</li>
         </ul>
       </PageSection>
     </PageLayout>

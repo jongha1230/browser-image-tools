@@ -56,7 +56,7 @@ export default async function GuideDetailPage(
         { label: guide.title },
       ]}
     >
-      <PageHero eyebrow="Guide" title={guide.title}>
+      <PageHero eyebrow="실전 가이드" title={guide.title}>
         <p>{guide.description}</p>
         <p>{guide.intro}</p>
         <p>예상 읽기 시간: {guide.readTime}</p>
@@ -72,7 +72,7 @@ export default async function GuideDetailPage(
 
       <PageSection
         title="이 글의 핵심 포인트"
-        intro={<p>검색 유입으로 들어와도 먼저 판단 기준을 빠르게 읽을 수 있도록 요점을 앞에 배치했습니다.</p>}
+        intro={<p>먼저 확인하면 좋은 판단 기준만 앞에 모아 두었습니다.</p>}
       >
         <ul className="chip-list">
           {guide.focusPoints.map((point) => (
@@ -100,7 +100,7 @@ export default async function GuideDetailPage(
 
       <PageSection
         title="바로 이어서 써볼 수 있는 도구"
-        intro={<p>가이드에서 설명한 판단 기준을 바로 적용해 볼 수 있도록 관련 도구를 함께 연결했습니다.</p>}
+        intro={<p>읽은 기준을 바로 적용할 수 있도록 관련 도구를 함께 연결했습니다.</p>}
       >
         <div className="card-grid">
           {relatedTools.map((tool) => (
@@ -117,7 +117,7 @@ export default async function GuideDetailPage(
 
       <PageSection
         title="함께 읽으면 좋은 가이드"
-        intro={<p>연관된 작업 흐름을 이어서 읽을 수 있도록 다른 가이드도 함께 배치했습니다.</p>}
+        intro={<p>같은 흐름에서 자주 함께 보는 문서를 이어서 읽을 수 있습니다.</p>}
       >
         <div className="card-grid">
           {siblingGuides.map((entry) => (
