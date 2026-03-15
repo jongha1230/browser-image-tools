@@ -15,7 +15,7 @@ export function SiteFooter() {
         <div className="site-footer__summary">
           <strong>{siteName}</strong>
           <p>{siteTagline}</p>
-          <p>이미지는 서버로 올리지 않고 현재 브라우저 안에서만 처리합니다.</p>
+          <p>이미지 압축, 리사이즈, 변환, EXIF 제거는 서버 업로드 없이 현재 브라우저 안에서만 처리합니다.</p>
         </div>
 
         <nav aria-label="보조 탐색">
