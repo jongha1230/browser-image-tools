@@ -39,8 +39,8 @@ export default function ToolsPage() {
 
       <PageSection title="다음으로 붙일 기능">
         <ul className="list-reset">
-          <li>브라우저 드래그 앤 드롭 업로드</li>
-          <li>도구별 옵션 패널과 미리보기</li>
+          <li>도구별 실제 압축, 리사이즈, 변환, EXIF 제거 옵션 패널</li>
+          <li>처리 결과 비교와 내보내기 전 검수 흐름</li>
           <li>배치 내보내기 다운로드 흐름</li>
         </ul>
       </PageSection>
