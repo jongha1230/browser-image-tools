@@ -472,6 +472,11 @@ img {
   gap: 4px;
 }
 
+.tool-shell__option-card {
+  display: grid;
+  gap: 16px;
+}
+
 .tool-shell__preview-meta h3,
 .tool-shell__summary-grid h3 {
   margin: 0;
@@ -481,12 +486,81 @@ img {
 .tool-shell__preview-meta p,
 .tool-shell__summary-grid p,
 .tool-shell__dropzone p,
-.tool-shell__empty p {
+.tool-shell__empty p,
+.tool-shell__message p,
+.tool-shell__helper {
   margin: 0;
 }
 
 .tool-shell__empty {
   text-align: left;
+}
+
+.tool-shell__field,
+.tool-shell__stat-list {
+  display: grid;
+  gap: 10px;
+}
+
+.tool-shell__field span,
+.tool-shell__stat-list dt {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.tool-shell__select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--text);
+  font: inherit;
+}
+
+.tool-shell__range-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.tool-shell__range-row input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent-strong);
+}
+
+.tool-shell__helper {
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.tool-shell__stat-list {
+  margin: 4px 0 0;
+}
+
+.tool-shell__stat-list div {
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.tool-shell__stat-list div:first-child {
+  padding-top: 0;
+}
+
+.tool-shell__stat-list div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.tool-shell__stat-list dd {
+  margin: 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .tool-shell__step-list {
@@ -589,5 +663,10 @@ img {
   .tool-shell__preview-actions,
   .tool-shell__message-header {
     align-items: stretch;
+  }
+
+  .tool-shell__range-row,
+  .tool-shell__stat-list div {
+    grid-template-columns: 1fr;
   }
 }

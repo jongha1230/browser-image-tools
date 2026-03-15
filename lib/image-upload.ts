@@ -21,6 +21,8 @@ export const supportedImageMimeTypes = [
   "image/webp",
 ] as const;
 
+export type SupportedImageMimeType = (typeof supportedImageMimeTypes)[number];
+
 export const supportedImageTypesText = "JPEG, PNG, WebP";
 export const supportedImageAccept = [
   ...supportedImageMimeTypes,
@@ -48,19 +50,35 @@ export function createUploadFileId(file: UploadFileLike) {
 }
 
 export function isSupportedImageFile(file: UploadFileLike) {
+  return getSupportedImageMimeType(file) !== null;
+}
+
+export function getSupportedImageMimeType(
+  file: UploadFileLike,
+): SupportedImageMimeType | null {
   const normalizedType = file.type.toLowerCase();
 
   if (
-    supportedImageMimeTypes.includes(
-      normalizedType as (typeof supportedImageMimeTypes)[number],
-    )
+    supportedImageMimeTypes.includes(normalizedType as SupportedImageMimeType)
   ) {
-    return true;
+    return normalizedType as SupportedImageMimeType;
   }
 
-  return supportedExtensions.includes(
-    getFileExtension(file.name) as (typeof supportedExtensions)[number],
-  );
+  const extension = getFileExtension(file.name);
+
+  if (extension === ".jpg" || extension === ".jpeg") {
+    return "image/jpeg";
+  }
+
+  if (extension === ".png") {
+    return "image/png";
+  }
+
+  if (extension === ".webp") {
+    return "image/webp";
+  }
+
+  return null;
 }
 
 export function getSupportedImageLabel(file: UploadFileLike) {
