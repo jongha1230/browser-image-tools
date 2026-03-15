@@ -67,9 +67,11 @@ npm run dev
 
 ## Vercel 배포 메모
 
+- 공개 데모 단계에서는 Vercel Production 배포를 안정적인 공유용 `vercel.app` 주소로 사용하고, 커스텀 도메인을 연결하기 전까지는 검색 노출을 계속 막습니다.
 - 최종 운영 도메인이 정해지기 전에는 `SITE_URL`과 `NEXT_PUBLIC_SITE_URL`을 비워 두는 편이 안전합니다.
-- 이 상태에서는 사이트가 `noindex`로 동작하고, `robots.txt`는 전체 차단, `sitemap.xml`은 빈 목록, `rss.xml`은 `404`로 응답합니다.
+- 이 상태에서는 사이트가 `noindex` 메타데이터와 `X-Robots-Tag` 응답 헤더를 함께 내보내고, `robots.txt`는 전체 차단, `sitemap.xml`은 빈 목록, `rss.xml`은 `404`로 응답합니다.
 - 최종 도메인을 연결한 뒤에는 Production 환경 변수 `SITE_URL`과 `NEXT_PUBLIC_SITE_URL`을 같은 `https://` 원본으로 설정해야 합니다.
+- 공유용 데모 링크는 Preview URL이 아니라 프로젝트의 안정적인 Production `vercel.app` 주소를 기준으로 문서와 소개 자료에 기록하는 편이 좋습니다.
 - 운영 도메인 연결 이후에는 기본 `vercel.app` 호스트나 보조 도메인 접근이 정식 캐노니컬 호스트로 리디렉션되도록 준비되어 있습니다.
 - 자세한 운영 절차는 [Vercel launch guide](./docs/vercel-launch.md)를 확인하면 됩니다.
 

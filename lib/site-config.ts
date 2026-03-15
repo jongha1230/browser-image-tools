@@ -70,6 +70,7 @@ export const usesVercelDefaultHostname =
   siteOriginUrl.hostname.endsWith(".vercel.app");
 export const isSiteIndexable =
   hasConfiguredSiteOrigin && !usesVercelDefaultHostname;
+export const siteRobotsHeaderValue = isSiteIndexable ? null : "noindex, nofollow";
 export const shouldRedirectToCanonicalHost = isSiteIndexable;
 export const siteIndexingBlockReason: SiteIndexingBlockReason = !hasConfiguredSiteOrigin
   ? "missing-site-url"

@@ -24,6 +24,7 @@ Recommended rule:
 If `SITE_URL` and `NEXT_PUBLIC_SITE_URL` are both empty, or if they point to a `*.vercel.app` hostname:
 
 - the HTML metadata stays `noindex, nofollow`
+- responses also emit `X-Robots-Tag: noindex, nofollow`
 - `robots.txt` disallows all crawling
 - `sitemap.xml` returns no URLs
 - `rss.xml` returns `404` with `X-Robots-Tag: noindex, nofollow`
@@ -31,6 +32,18 @@ If `SITE_URL` and `NEXT_PUBLIC_SITE_URL` are both empty, or if they point to a `
 - no production-host redirect is enabled
 
 This keeps preview and temporary `vercel.app` access usable without teaching search engines the wrong canonical host.
+
+## Stable public demo on `vercel.app`
+
+Before a custom domain exists, the safest shareable setup is:
+
+1. Create one dedicated Vercel project for this repo.
+2. Use the project's stable Production `vercel.app` address as the public demo URL.
+3. Keep `SITE_URL` and `NEXT_PUBLIC_SITE_URL` empty in both Production and Preview.
+4. Keep Vercel Authentication or other deployment protection disabled for the Production deployment so anyone with the link can open it.
+5. Continue using Preview deployments only for branch checks and internal review links.
+
+That combination keeps the demo public and easy to share while still preventing accidental indexation before the real domain and search-launch configuration exist.
 
 ## After the final domain is purchased
 
@@ -66,10 +79,12 @@ Project settings to review:
 - Framework Preset: `Next.js`
 - Production Branch: `main`
 - Environment Variables:
-  - Production: set `SITE_URL` and `NEXT_PUBLIC_SITE_URL`
+  - Production demo on `vercel.app`: leave `SITE_URL` and `NEXT_PUBLIC_SITE_URL` empty
+  - Production after custom domain launch: set `SITE_URL` and `NEXT_PUBLIC_SITE_URL`
   - Preview: keep them empty unless there is a deliberate temporary reason to test canonical behavior
 - Domains:
-  - add the chosen canonical host
+  - while the site is demo-only, the default Production `vercel.app` hostname can remain the share URL
+  - after the domain purchase, add the chosen canonical host
   - add the secondary host (`www` or apex)
   - configure the non-canonical host to redirect to the canonical host
 

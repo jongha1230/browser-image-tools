@@ -1,5 +1,9 @@
 import { guideRoutes, siteDescription, siteName, siteUpdatedAt } from "@/lib/site-content";
-import { getAbsoluteSiteUrl, isSiteIndexable } from "@/lib/site-config";
+import {
+  getAbsoluteSiteUrl,
+  isSiteIndexable,
+  siteRobotsHeaderValue,
+} from "@/lib/site-config";
 
 function escapeXml(value: string) {
   return value
@@ -16,7 +20,7 @@ export async function GET() {
       status: 404,
       headers: {
         "content-type": "text/plain; charset=utf-8",
-        "x-robots-tag": "noindex, nofollow",
+        "x-robots-tag": siteRobotsHeaderValue ?? "noindex, nofollow",
       },
     });
   }

@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-import { getCanonicalRedirectUrl } from "@/lib/site-config";
+import { getCanonicalRedirectUrl, siteRobotsHeaderValue } from "@/lib/site-config";
 
 export function proxy(request: NextRequest) {
   const redirectUrl = getCanonicalRedirectUrl({
@@ -12,7 +12,13 @@ export function proxy(request: NextRequest) {
   });
 
   if (!redirectUrl) {
-    return NextResponse.next();
+    const response = NextResponse.next();
+
+    if (siteRobotsHeaderValue) {
+      response.headers.set("x-robots-tag", siteRobotsHeaderValue);
+    }
+
+    return response;
   }
 
   return NextResponse.redirect(redirectUrl, 308);
