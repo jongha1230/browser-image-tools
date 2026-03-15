@@ -20,6 +20,10 @@ export function ToolPage({ tool }: ToolPageProps) {
       <PageHero eyebrow="Tool Landing Page" title={tool.title}>
         <p>{tool.description}</p>
         <p>{tool.intro}</p>
+        <p>
+          현재 단계에서는 JPEG, PNG, WebP 파일 업로드와 미리보기까지 브라우저
+          안에서만 처리하며, 실제 편집 옵션은 이어서 연결할 예정입니다.
+        </p>
         <div className="hero__actions">
           <Link className="button-muted" href="/tools">
             도구 허브로 돌아가기
@@ -29,7 +33,13 @@ export function ToolPage({ tool }: ToolPageProps) {
 
       <PageSection
         title="이 페이지에서 먼저 설명하는 내용"
-        intro={<p>클라이언트 전용 도구 셸을 붙이기 전에 검색 가능하고 읽을 수 있는 HTML을 먼저 제공합니다.</p>}
+        intro={
+          <p>
+            인터랙션과 별개로 검색 가능하고 읽을 수 있는 HTML 설명을 먼저
+            유지해 각 도구 라우트의 역할과 지원 범위를 초기 응답에서 바로
+            전달합니다.
+          </p>
+        }
       >
         <div className="detail-grid">
           {tool.highlights.map((item) => (
@@ -50,7 +60,7 @@ export function ToolPage({ tool }: ToolPageProps) {
 
       <ToolShell
         title={tool.title}
-        description="클라이언트 전용 도구 셸이며, 현재 단계에서는 실제 파일 처리를 붙일 자리를 보여줍니다."
+        description="클라이언트 전용 도구 셸이며, 현재 단계에서는 로컬 업로드와 미리보기까지 연결하고 실제 편집 옵션은 다음 단계에 붙입니다."
         primaryActionLabel={tool.shellActionLabel}
       />
     </PageLayout>
