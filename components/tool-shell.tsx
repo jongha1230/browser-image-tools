@@ -447,6 +447,8 @@ export function ToolShell({
   const shouldPrioritizeZipDownload = successCount > 1;
   const selectedResult =
     selectedItemState?.status === "success" ? selectedItemState.result ?? null : null;
+  const isLosslessPngCompression =
+    isCompressTool && targetMimeType === "image/png";
   const shouldReplaceOnAdd = shouldReplaceUploadQueue({
     existingItemCount: items.length,
     existingStatus: selectedItemState?.status ?? null,
@@ -665,6 +667,21 @@ export function ToolShell({
       });
     }
   }
+
+  const compressionOptionDescription =
+    isLosslessPngCompression
+      ? "PNG는 무손실 재저장이라 스크린샷, 차트, UI 이미지처럼 이미 최적화된 파일은 용량이 오히려 커질 수 있습니다. 더 작게 만들려면 WebP 또는 JPEG를 선택해 주세요."
+      : compressionOutputOptions.find((option) => option.value === outputFormat)
+          ?.description ?? "출력 형식을 선택해 압축 결과를 저장합니다.";
+  const selectedCompressionGrowthMessage =
+    isCompressTool &&
+    selectedItem &&
+    selectedResult &&
+    selectedResult.blob.size > selectedItem.file.size
+      ? `현재 설정에서는 원본보다 ${formatFileSize(
+          selectedResult.blob.size - selectedItem.file.size,
+        )} 커졌습니다. PNG 무손실 재저장일 수 있으니 더 작게 만들려면 WebP 또는 JPEG를 선택해 주세요.`
+      : null;
 
   function focusWorkspaceRegion(node: HTMLElement | null) {
     if (!node || typeof window === "undefined") {
@@ -1291,7 +1308,11 @@ export function ToolShell({
         items.length > 0 && targetMimeType
           ? `${items.length}개 파일에 ${getCompressionMimeTypeLabel(targetMimeType)} 형식과 ${
               isQualityEnabled ? `${quality}% 품질` : "무손실 재저장"
-            }을 일괄 적용합니다.`
+            }을 일괄 적용합니다.${
+              targetMimeType === "image/png"
+                ? " PNG 무손실 재저장은 원본보다 커질 수 있습니다."
+                : ""
+            }`
           : "먼저 압축할 이미지를 추가하면 배치 품질과 출력 형식을 선택할 수 있습니다.",
       export:
         hasResults
@@ -1369,9 +1390,6 @@ export function ToolShell({
   const uploadStepMessage = repeatActionMessage ?? statusByStep.upload;
   const currentStepMessage =
     activeStep === "upload" ? uploadStepMessage : statusByStep[activeStep];
-  const selectedDownloadLabel = shouldPrioritizeZipDownload
-    ? "선택한 파일만 다운로드"
-    : "대표 결과 다운로드";
 
   function renderWorkflowSidebar() {
     if (!selectedItem || !selectedItemState) {
@@ -1453,15 +1471,13 @@ export function ToolShell({
                 >
                   {isPreparingZip ? "ZIP 준비 중..." : "성공 파일 ZIP 다운로드"}
                 </button>
-                {selectedResult ? (
+                {selectedResult && !shouldPrioritizeZipDownload ? (
                   <button
-                    className={
-                      shouldPrioritizeZipDownload ? "button-muted" : "button-link"
-                    }
+                    className="button-link"
                     onClick={() => handleDownloadResult(selectedItem.id)}
                     type="button"
                   >
-                    {selectedDownloadLabel}
+                    대표 결과 다운로드
                   </button>
                 ) : null}
               </>
@@ -1505,7 +1521,7 @@ export function ToolShell({
                 {processingCount > 0
                   ? `${processingCount}개 파일을 현재 처리 중입니다.`
                   : shouldPrioritizeZipDownload
-                    ? `성공한 결과가 여러 개면 ZIP으로 한 번에 받고, 필요한 경우 선택한 파일만 따로 내려받을 수 있습니다.`
+                    ? `성공한 결과가 여러 개면 ZIP으로 한 번에 받고, 개별 파일은 아래 카드의 결과 다운로드 버튼으로 받을 수 있습니다.`
                     : `성공한 결과는 바로 개별 다운로드하거나 ZIP으로 한 번에 받을 수 있습니다.`}
               </p>
             </div>
@@ -1521,6 +1537,12 @@ export function ToolShell({
           {selectedItemState.status === "error" ? (
             <p className="tool-shell__helper tool-shell__helper--error">
               {selectedItemState.errorMessage}
+            </p>
+          ) : null}
+
+          {selectedCompressionGrowthMessage ? (
+            <p className="tool-shell__helper">
+              {selectedCompressionGrowthMessage}
             </p>
           ) : null}
 
@@ -1766,8 +1788,7 @@ export function ToolShell({
               </label>
 
               <p className="tool-shell__helper">
-                {compressionOutputOptions.find((option) => option.value === outputFormat)
-                  ?.description ?? "출력 형식을 선택해 압축 결과를 저장합니다."}
+                {compressionOptionDescription}
               </p>
 
               <label className="tool-shell__field" htmlFor="compress-quality">
