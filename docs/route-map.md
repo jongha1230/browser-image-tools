@@ -21,28 +21,18 @@ Routing rules:
 - `/tools/convert-image`
 - `/tools/remove-exif`
 - `/guides`
-- `/about`
-- `/privacy`
-- `/contact`
-
-## Planned Content Routes
-
-These routes are expected during the content and SEO phase:
-
 - `/guides/image-compression-basics`
 - `/guides/webp-vs-jpeg-vs-png`
 - `/guides/remove-exif-for-privacy`
 - `/guides/batch-resize-checklist`
-
-## Planned Technical Routes
-
-These routes should be added when the relevant features are implemented:
-
+- `/about`
+- `/privacy`
+- `/contact`
 - `/robots.txt`
 - `/sitemap.xml`
 - `/rss.xml`
 
-Only add `ads.txt` after a real publisher ID exists.
+`ads.txt` is still intentionally deferred until a real publisher ID exists.
 
 ## Route Definitions
 
