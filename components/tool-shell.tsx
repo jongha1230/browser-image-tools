@@ -42,9 +42,15 @@ import {
   validateResizeDimensions,
   type ResizeDimensions,
 } from "@/lib/resize-image";
+import { createExifRemovedFileName } from "@/lib/remove-exif";
 
 type StepKey = "upload" | "options" | "export";
-type ToolShellVariant = "default" | "compress" | "resize" | "convert";
+type ToolShellVariant =
+  | "default"
+  | "compress"
+  | "resize"
+  | "convert"
+  | "removeExif";
 
 type CompressionResult = {
   blob: Blob;
@@ -74,6 +80,16 @@ type ConvertResult = {
   mimeType: SupportedImageMimeType;
   previewUrl: string;
   quality: number;
+  sourceId: string;
+  width: number;
+  height: number;
+};
+
+type RemoveExifResult = {
+  blob: Blob;
+  fileName: string;
+  mimeType: SupportedImageMimeType;
+  previewUrl: string;
   sourceId: string;
   width: number;
   height: number;
@@ -241,6 +257,8 @@ export function ToolShell({
     useState<CompressionResult | null>(null);
   const [resizeResult, setResizeResult] = useState<ResizeResult | null>(null);
   const [convertResult, setConvertResult] = useState<ConvertResult | null>(null);
+  const [removeExifResult, setRemoveExifResult] =
+    useState<RemoveExifResult | null>(null);
   const dragDepthRef = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const {
@@ -255,7 +273,9 @@ export function ToolShell({
   const isCompressTool = variant === "compress";
   const isResizeTool = variant === "resize";
   const isConvertTool = variant === "convert";
-  const isSingleFileTool = isCompressTool || isResizeTool || isConvertTool;
+  const isRemoveExifTool = variant === "removeExif";
+  const isSingleFileTool =
+    isCompressTool || isResizeTool || isConvertTool || isRemoveExifTool;
   const selectedItem = items[0] ?? null;
   const selectedItemId = selectedItem?.id ?? null;
   const selectedMimeType = selectedItem
@@ -305,18 +325,25 @@ export function ToolShell({
       resizeResult.width !== resizeTargetDimensions?.width ||
       resizeResult.height !== resizeTargetDimensions?.height
     : false;
+  const isRemoveExifResultStale = removeExifResult
+    ? removeExifResult.sourceId !== selectedItem?.id
+    : false;
   const processingErrorTitle = isCompressTool
     ? "압축을 진행할 수 없습니다"
     : isResizeTool
       ? "크기 조절을 진행할 수 없습니다"
       : isConvertTool
         ? "포맷 변환을 진행할 수 없습니다"
-      : "처리를 진행할 수 없습니다";
+        : isRemoveExifTool
+          ? "EXIF 제거를 진행할 수 없습니다"
+          : "처리를 진행할 수 없습니다";
   const singleFileLimitMessage = isCompressTool
     ? "이미지 압축은 현재 한 번에 1개 파일만 지원합니다. 아래 카드에서 나머지 파일을 제거하면 바로 계속할 수 있습니다."
     : isResizeTool
       ? "이미지 크기 조절은 현재 한 번에 1개 파일만 지원합니다. 아래 카드에서 나머지 파일을 제거하면 바로 계속할 수 있습니다."
-      : "이미지 포맷 변환은 현재 한 번에 1개 파일만 지원합니다. 아래 카드에서 나머지 파일을 제거하면 바로 계속할 수 있습니다.";
+      : isConvertTool
+        ? "이미지 포맷 변환은 현재 한 번에 1개 파일만 지원합니다. 아래 카드에서 나머지 파일을 제거하면 바로 계속할 수 있습니다."
+        : "EXIF 제거 도구는 현재 한 번에 1개 파일만 지원합니다. 아래 카드에서 나머지 파일을 제거하면 바로 계속할 수 있습니다.";
 
   let statusByStep: Record<StepKey, string>;
 
@@ -378,6 +405,22 @@ export function ToolShell({
           ? `${resizeResult.fileName} 파일이 준비되었습니다. 원본과 결과 해상도, 파일 크기를 확인한 뒤 바로 다운로드할 수 있습니다.`
           : "크기 조절을 실행하면 결과 해상도, 저장 파일명, 결과 파일 크기를 이 단계에서 확인할 수 있습니다.",
     };
+  } else if (isRemoveExifTool) {
+    statusByStep = {
+      upload: hasTooManyFiles
+        ? "EXIF 제거는 현재 한 번에 1개 파일만 지원합니다. 미리보기 카드에서 하나만 남기면 작업을 계속할 수 있습니다."
+        : selectedItem
+          ? `${selectedItem.file.name} 파일이 준비되었습니다. 이 파일은 브라우저 탭 안에서만 유지되며 서버로 전송되지 않습니다.`
+          : `JPEG, PNG, WebP 이미지 1개를 추가하면 이 페이지에서 바로 메타데이터 제거용 재저장과 다운로드까지 진행할 수 있습니다.`,
+      options:
+        selectedItem && selectedMimeType
+          ? `${getCompressionMimeTypeLabel(selectedMimeType)} 형식으로 다시 저장하며, 위치, 기기, 촬영 시각 같은 EXIF 메타데이터가 제거될 수 있습니다.`
+          : "먼저 메타데이터를 정리할 이미지를 1개만 준비하면 개인정보 안내와 저장 정보를 확인할 수 있습니다.",
+      export:
+        removeExifResult && !isRemoveExifResultStale
+          ? `${removeExifResult.fileName} 파일이 준비되었습니다. 원본과 결과 정보를 확인한 뒤 바로 다운로드할 수 있습니다.`
+          : "EXIF 제거를 실행하면 저장 파일명, 출력 형식, 파일 크기, 개인정보 안내를 이 단계에서 확인할 수 있습니다.",
+    };
   } else {
     statusByStep = {
       upload:
@@ -431,6 +474,7 @@ export function ToolShell({
       setCompressionResult(null);
       setResizeResult(null);
       setConvertResult(null);
+      setRemoveExifResult(null);
       setConversionOutputFormat("image/webp");
       setProcessingError(null);
       setResizeWidthValue("");
@@ -460,6 +504,10 @@ export function ToolShell({
       if (selectedMimeType) {
         setConversionOutputFormat(getDefaultConversionMimeType(selectedMimeType));
       }
+    }
+
+    if (isRemoveExifTool) {
+      setRemoveExifResult(null);
     }
 
     let isCancelled = false;
@@ -502,6 +550,7 @@ export function ToolShell({
   }, [
     isCompressTool,
     isConvertTool,
+    isRemoveExifTool,
     isResizeTool,
     isSingleFileTool,
     selectedItemId,
@@ -532,6 +581,13 @@ export function ToolShell({
 
     if (isConvertTool) {
       setActiveStep(convertResult && !isConvertResultStale ? "export" : "options");
+      return;
+    }
+
+    if (isRemoveExifTool) {
+      setActiveStep(
+        removeExifResult && !isRemoveExifResultStale ? "export" : "options",
+      );
     }
   }, [
     compressionResult,
@@ -540,9 +596,12 @@ export function ToolShell({
     isCompressionResultStale,
     isConvertResultStale,
     isConvertTool,
+    isRemoveExifResultStale,
+    isRemoveExifTool,
     isResizeResultStale,
     isResizeTool,
     isSingleFileTool,
+    removeExifResult,
     resizeResult,
     selectedItem,
   ]);
@@ -570,6 +629,14 @@ export function ToolShell({
       }
     };
   }, [convertResult]);
+
+  useEffect(() => {
+    return () => {
+      if (removeExifResult) {
+        URL.revokeObjectURL(removeExifResult.previewUrl);
+      }
+    };
+  }, [removeExifResult]);
 
   function openFilePicker() {
     inputRef.current?.click();
@@ -1029,6 +1096,94 @@ export function ToolShell({
     }
   }
 
+  async function handleRemoveExif() {
+    if (!selectedItem) {
+      setProcessingError("먼저 메타데이터를 정리할 이미지를 추가해 주세요.");
+      setActiveStep("upload");
+      return;
+    }
+
+    if (hasTooManyFiles) {
+      setProcessingError(
+        "EXIF 제거는 현재 한 번에 1개 파일만 지원합니다. 미리보기에서 하나만 남긴 뒤 다시 시도해 주세요.",
+      );
+      setActiveStep("upload");
+      return;
+    }
+
+    if (!selectedMimeType) {
+      setProcessingError(
+        "이 파일 형식은 현재 EXIF 제거 출력 대상으로 사용할 수 없습니다.",
+      );
+      return;
+    }
+
+    setIsProcessing(true);
+    setProcessingError(null);
+
+    try {
+      const image = await loadImageElement(selectedItem.previewUrl);
+      const canvas = document.createElement("canvas");
+
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        throw new Error(
+          "브라우저에서 이미지 캔버스를 준비하지 못했습니다. 다른 브라우저에서 다시 시도해 주세요.",
+        );
+      }
+
+      if (selectedMimeType === "image/jpeg") {
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+      const blob = await canvasToBlob(
+        canvas,
+        selectedMimeType,
+        isQualityAdjustableFormat(selectedMimeType) ? 0.92 : undefined,
+      );
+      const actualMimeType = getSupportedImageMimeType({
+        name: createExifRemovedFileName(selectedItem.file.name, selectedMimeType),
+        size: blob.size,
+        type: blob.type,
+        lastModified: Date.now(),
+      });
+
+      if (!actualMimeType || actualMimeType !== selectedMimeType) {
+        throw new Error(
+          selectedMimeType === "image/webp"
+            ? "현재 브라우저에서는 WebP 형식으로 메타데이터 제거 결과를 다시 저장하지 못했습니다. 다른 브라우저에서 다시 시도해 주세요."
+            : "선택한 형식으로 메타데이터 제거 결과를 저장하지 못했습니다. 다른 이미지로 다시 시도해 주세요.",
+        );
+      }
+
+      setRemoveExifResult({
+        blob,
+        fileName: createExifRemovedFileName(selectedItem.file.name, actualMimeType),
+        mimeType: actualMimeType,
+        previewUrl: URL.createObjectURL(blob),
+        sourceId: selectedItem.id,
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      });
+      setActiveStep("export");
+    } catch (error: unknown) {
+      setProcessingError(
+        error instanceof Error
+          ? error.message
+          : "EXIF 제거 중 오류가 발생했습니다. 다시 시도해 주세요.",
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
   function handleDownloadCompressionResult() {
     if (!compressionResult) {
       return;
@@ -1053,6 +1208,14 @@ export function ToolShell({
     downloadBlobUrl(convertResult.previewUrl, convertResult.fileName);
   }
 
+  function handleDownloadRemoveExifResult() {
+    if (!removeExifResult) {
+      return;
+    }
+
+    downloadBlobUrl(removeExifResult.previewUrl, removeExifResult.fileName);
+  }
+
   return (
     <section className="tool-shell" aria-labelledby="tool-shell-title">
       <div className="tool-shell__header">
@@ -1067,7 +1230,9 @@ export function ToolShell({
               ? "브라우저 로컬 리사이즈 활성화"
               : isConvertTool
                 ? "브라우저 로컬 포맷 변환 활성화"
-              : "브라우저 로컬 업로드 활성화"}
+                : isRemoveExifTool
+                  ? "브라우저 로컬 EXIF 제거 활성화"
+                  : "브라우저 로컬 업로드 활성화"}
         </span>
       </div>
 
@@ -1118,7 +1283,9 @@ export function ToolShell({
                   ? "현재 크기 조절 도구는 단일 파일 작업만 지원"
                   : isConvertTool
                     ? "현재 포맷 변환 도구는 단일 파일 작업만 지원"
-                  : "이후 도구 페이지에서도 같은 업로드 상태 재사용 가능"}
+                    : isRemoveExifTool
+                      ? "현재 EXIF 제거 도구는 단일 파일 작업만 지원"
+                      : "이후 도구 페이지에서도 같은 업로드 상태 재사용 가능"}
             </li>
           </ul>
         </div>
@@ -1589,6 +1756,86 @@ export function ToolShell({
           </div>
         ) : null}
 
+        {isRemoveExifTool && selectedItem ? (
+          <div className="detail-grid tool-shell__comparison-grid">
+            <section className="card tool-shell__option-card">
+              <h3>메타데이터 제거 안내</h3>
+              <p>
+                이 도구는 이미지를 같은 형식으로 다시 저장해 공유 전에 위치,
+                기기, 촬영 시각 같은 EXIF 메타데이터 노출 가능성을 줄입니다.
+              </p>
+              <ul className="chip-list">
+                <li>GPS 위치 정보 제거 가능</li>
+                <li>기기 모델 및 촬영 설정 제거 가능</li>
+                <li>현재 브라우저 탭 안에서만 로컬 처리</li>
+              </ul>
+              <p className="tool-shell__helper">
+                결과 파일은 원본과 같은 형식으로 다시 저장하며, 다운로드용
+                파일명에는 `-no-exif`가 붙습니다.
+              </p>
+            </section>
+
+            <section className="card">
+              <h3>원본 정보</h3>
+              <dl className="tool-shell__stat-list">
+                <div>
+                  <dt>파일명</dt>
+                  <dd>{selectedItem.file.name}</dd>
+                </div>
+                <div>
+                  <dt>원본 형식</dt>
+                  <dd>
+                    {selectedMimeType
+                      ? getCompressionMimeTypeLabel(selectedMimeType)
+                      : "확인 불가"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>파일 크기</dt>
+                  <dd>{formatFileSize(selectedItem.file.size)}</dd>
+                </div>
+                <div>
+                  <dt>해상도</dt>
+                  <dd>{sourceDimensions ? formatDimensions(sourceDimensions) : "읽는 중"}</dd>
+                </div>
+              </dl>
+            </section>
+
+            <section className="card">
+              <h3>예상 출력</h3>
+              <dl className="tool-shell__stat-list">
+                <div>
+                  <dt>출력 형식</dt>
+                  <dd>
+                    {selectedMimeType
+                      ? getCompressionMimeTypeLabel(selectedMimeType)
+                      : "형식 확인 필요"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>메타데이터</dt>
+                  <dd>위치, 기기, 촬영 시각 같은 EXIF 제거용 재저장</dd>
+                </div>
+                <div>
+                  <dt>해상도</dt>
+                  <dd>{sourceDimensions ? formatDimensions(sourceDimensions) : "읽는 중"}</dd>
+                </div>
+                <div>
+                  <dt>저장 이름</dt>
+                  <dd>
+                    {selectedMimeType
+                      ? createExifRemovedFileName(
+                          selectedItem.file.name,
+                          selectedMimeType,
+                        )
+                      : "형식 확인 필요"}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          </div>
+        ) : null}
+
         {isCompressTool && compressionResult && selectedItem ? (
           <div className="detail-grid tool-shell__comparison-grid">
             <article className="card tool-shell__preview-card">
@@ -1807,6 +2054,82 @@ export function ToolShell({
             </section>
           </div>
         ) : null}
+
+        {isRemoveExifTool && removeExifResult && selectedItem ? (
+          <div className="detail-grid tool-shell__comparison-grid">
+            <article className="card tool-shell__preview-card">
+              <div className="tool-shell__preview-media">
+                <Image
+                  alt={`${removeExifResult.fileName} 미리보기`}
+                  fill
+                  sizes="(min-width: 900px) 30vw, (min-width: 640px) 45vw, 100vw"
+                  src={removeExifResult.previewUrl}
+                  unoptimized
+                />
+              </div>
+              <div className="tool-shell__preview-meta">
+                <h3>{removeExifResult.fileName}</h3>
+                <p>{getCompressionMimeTypeLabel(removeExifResult.mimeType)}</p>
+                <p>{formatFileSize(removeExifResult.blob.size)}</p>
+              </div>
+            </article>
+
+            <section className="card">
+              <h3>EXIF 제거 결과</h3>
+              <dl className="tool-shell__stat-list">
+                <div>
+                  <dt>원본 파일명</dt>
+                  <dd>{selectedItem.file.name}</dd>
+                </div>
+                <div>
+                  <dt>결과 파일명</dt>
+                  <dd>{removeExifResult.fileName}</dd>
+                </div>
+                <div>
+                  <dt>원본 크기</dt>
+                  <dd>{formatFileSize(selectedItem.file.size)}</dd>
+                </div>
+                <div>
+                  <dt>결과 크기</dt>
+                  <dd>{formatFileSize(removeExifResult.blob.size)}</dd>
+                </div>
+                <div>
+                  <dt>용량 변화</dt>
+                  <dd>
+                    {formatCompressionSummary(
+                      selectedItem.file.size,
+                      removeExifResult.blob.size,
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt>출력 형식</dt>
+                  <dd>{getCompressionMimeTypeLabel(removeExifResult.mimeType)}</dd>
+                </div>
+                <div>
+                  <dt>해상도</dt>
+                  <dd>{formatDimensions(removeExifResult)}</dd>
+                </div>
+                <div>
+                  <dt>메타데이터 처리</dt>
+                  <dd>위치, 기기, 촬영 시각 같은 EXIF 제거용 재저장</dd>
+                </div>
+              </dl>
+
+              {isRemoveExifResultStale ? (
+                <p className="tool-shell__helper">
+                  원본 이미지가 변경되어 현재 결과는 이전 파일 기준입니다. 최신
+                  파일로 다시 저장하려면 EXIF 제거를 한 번 더 실행해 주세요.
+                </p>
+              ) : (
+                <p className="tool-shell__helper">
+                  결과 파일은 현재 브라우저 메모리에만 존재하며, 다운로드하지
+                  않으면 서버로 전송되지 않습니다.
+                </p>
+              )}
+            </section>
+          </div>
+        ) : null}
       </div>
 
       <div className="tool-shell__step-list" aria-label="작업 흐름">
@@ -1886,6 +2209,25 @@ export function ToolShell({
               type="button"
               disabled={!convertResult}
               onClick={handleDownloadConvertResult}
+            >
+              결과 다운로드
+            </button>
+          </>
+        ) : isRemoveExifTool ? (
+          <>
+            <button
+              className="button-link"
+              type="button"
+              disabled={!selectedItem || hasTooManyFiles || isProcessing}
+              onClick={handleRemoveExif}
+            >
+              {isProcessing ? "메타데이터 제거 중..." : primaryActionLabel}
+            </button>
+            <button
+              className="button-muted"
+              type="button"
+              disabled={!removeExifResult}
+              onClick={handleDownloadRemoveExifResult}
             >
               결과 다운로드
             </button>

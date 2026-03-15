@@ -135,7 +135,7 @@ export const toolRoutes = [
       "제거 후 공유 전 확인 포인트 정리",
       "배치 내보내기 연계 준비",
     ],
-    shellActionLabel: "EXIF 제거 예정",
+    shellActionLabel: "EXIF 제거하기",
   },
 ] satisfies ToolRoute[];
 
