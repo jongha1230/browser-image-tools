@@ -1,8 +1,19 @@
 import type { MetadataRoute } from "next";
 
-import { siteOrigin } from "@/lib/site-content";
+import { getAbsoluteSiteUrl, isSiteIndexable, siteOriginUrl } from "@/lib/site-config";
 
 export default function robots(): MetadataRoute.Robots {
+  if (!isSiteIndexable) {
+    return {
+      rules: [
+        {
+          userAgent: "*",
+          disallow: "/",
+        },
+      ],
+    };
+  }
+
   return {
     rules: [
       {
@@ -10,7 +21,7 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
       },
     ],
-    sitemap: [`${siteOrigin}/sitemap.xml`],
-    host: siteOrigin,
+    sitemap: [getAbsoluteSiteUrl("/sitemap.xml")],
+    host: siteOriginUrl.host,
   };
 }

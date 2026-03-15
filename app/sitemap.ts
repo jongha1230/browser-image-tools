@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 
-import { requiredRoutes, siteOrigin, siteUpdatedAt } from "@/lib/site-content";
+import { requiredRoutes, siteUpdatedAt } from "@/lib/site-content";
+import { getAbsoluteSiteUrl, isSiteIndexable } from "@/lib/site-config";
 
 function getPriority(path: (typeof requiredRoutes)[number]) {
   if (path === "/") {
@@ -41,10 +42,14 @@ function getChangeFrequency(
 }
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  if (!isSiteIndexable) {
+    return [];
+  }
+
   const lastModified = new Date(siteUpdatedAt);
 
   return requiredRoutes.map((path) => ({
-    url: new URL(path, siteOrigin).toString(),
+    url: getAbsoluteSiteUrl(path),
     lastModified,
     changeFrequency: getChangeFrequency(path),
     priority: getPriority(path),

@@ -1,15 +1,3 @@
-const fallbackSiteOrigin = "https://browser-image-tools.example";
-const configuredSiteOrigin = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-
-function normalizeSiteOrigin(value: string) {
-  return value.replace(/\/+$/, "");
-}
-
-export const siteOrigin =
-  configuredSiteOrigin && /^https?:\/\//.test(configuredSiteOrigin)
-    ? normalizeSiteOrigin(configuredSiteOrigin)
-    : fallbackSiteOrigin;
-
 export const repositoryUrl = "https://github.com/jongha1230/browser-image-tools";
 export const repositoryIssuesUrl = `${repositoryUrl}/issues`;
 export const siteUpdatedAt = "2026-03-15T09:00:00+09:00";

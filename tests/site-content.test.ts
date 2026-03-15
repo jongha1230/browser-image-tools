@@ -92,7 +92,9 @@ describe("site content scaffold", () => {
   it("builds canonical and OG defaults from route metadata", () => {
     const metadata = createPageMetadata(getPageMetadataEntry("/tools"));
 
-    expect(metadata.alternates).toEqual({ canonical: "/tools" });
+    expect(metadata.alternates).toEqual({
+      canonical: "https://browser-image-tools.example/tools",
+    });
     expect(metadata.openGraph).toMatchObject({
       title: "이미지 도구 허브",
       description:
@@ -104,5 +106,9 @@ describe("site content scaffold", () => {
     expect(metadata.openGraph?.url?.toString()).toBe(
       "https://browser-image-tools.example/tools",
     );
+    expect(metadata.robots).toMatchObject({
+      index: false,
+      follow: false,
+    });
   });
 });

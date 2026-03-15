@@ -13,10 +13,11 @@
 
 ## 배포 전 확인
 
-- 실제 운영 도메인이 `NEXT_PUBLIC_SITE_URL`에 반영돼 있는지 확인
+- 실제 운영 도메인이 `NEXT_PUBLIC_SITE_URL` 또는 `SITE_URL`에 `https://` 포함 값으로 반영돼 있는지 확인
+- 운영 도메인 미설정 또는 `*.vercel.app` 호스트 사용 시 `noindex`와 크롤링 차단이 유지되는지 확인
 - `robots.txt`, `sitemap.xml`, `rss.xml`이 운영 도메인 기준으로 노출되는지 확인
 - 홈, 도구, 가이드, 소개, 개인정보, 문의 페이지 메타데이터와 canonical 확인
-- `icon.svg`가 브라우저 탭과 공유 미리보기 기본 아이콘으로 정상 노출되는지 확인
+- `icon.svg`와 Apple 터치 아이콘이 브라우저 탭과 홈 화면 저장 시 정상 노출되는지 확인
 
 ## 정책 및 운영
 
