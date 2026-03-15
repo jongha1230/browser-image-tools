@@ -42,6 +42,7 @@ import {
 import {
   formatFileSize,
   getSupportedImageMimeType,
+  shouldReplaceUploadQueue,
   supportedImageAccept,
   supportedImageTypesText,
   type SupportedImageMimeType,
@@ -250,7 +251,12 @@ function getDropzoneCopy(
   variant: ToolShellVariant,
   keepAspectRatio: boolean,
   skippedConvertCount: number,
+  replaceOnNextAdd: boolean,
 ) {
+  if (replaceOnNextAdd) {
+    return "다음 파일 추가 시 현재 단일 작업 자동 교체";
+  }
+
   if (variant === "compress") {
     return "같은 품질과 출력 형식을 큐 전체에 일괄 적용";
   }
@@ -297,6 +303,7 @@ export function ToolShell({
   >("width");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPreparingZip, setIsPreparingZip] = useState(false);
+  const [readyForReplacement, setReadyForReplacement] = useState(false);
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [processingNote, setProcessingNote] = useState<string | null>(null);
   const [referenceDimensions, setReferenceDimensions] =
@@ -307,6 +314,7 @@ export function ToolShell({
   const [processingEngine, setProcessingEngine] =
     useState<ProcessingEngine>("main");
   const dragDepthRef = useRef(0);
+  const dropzoneRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const optionPanelRef = useRef<HTMLElement>(null);
   const workflowSummaryRef = useRef<HTMLDivElement>(null);
@@ -433,14 +441,36 @@ export function ToolShell({
   const selectedItemState = selectedItem
     ? (queueState[selectedItem.id] ?? { status: "queued" })
     : null;
+  const hasQueuedItems = items.some(
+    (item) => (queueState[item.id]?.status ?? "queued") === "queued",
+  );
+  const shouldPrioritizeZipDownload = successCount > 1;
   const selectedResult =
     selectedItemState?.status === "success" ? selectedItemState.result ?? null : null;
-  const dropzoneTitle = hasItems
-    ? "이미지를 더 추가하거나 현재 큐를 조정하세요"
-    : "이미지를 끌어 놓거나 파일 선택으로 여러 개 추가하세요";
-  const dropzoneHint = hasItems
-    ? `추가한 파일은 현재 큐 뒤에 이어 붙습니다. ${supportedImageTypesText} 이미지를 다시 선택하거나 클립보드 붙여넣기로 바로 더할 수 있습니다.`
-    : `지원 형식은 ${supportedImageTypesText}입니다. 붙여넣기 이미지는 이 페이지에서 바로 추가할 수 있고, 드롭 영역에 포커스한 뒤 Enter 또는 Space 로도 파일 선택 창을 열 수 있습니다.`;
+  const isLosslessPngCompression =
+    isCompressTool && targetMimeType === "image/png";
+  const shouldReplaceOnAdd = shouldReplaceUploadQueue({
+    existingItemCount: items.length,
+    existingStatus: selectedItemState?.status ?? null,
+    isProcessing,
+    readyForReplacement,
+  });
+  const repeatActionMessage = readyForReplacement
+    ? "다운로드를 시작했습니다. 새 파일을 추가하면 현재 단일 결과와 미리보기가 자동으로 새 작업으로 교체됩니다."
+    : selectedItemState?.status === "error" && shouldReplaceOnAdd
+      ? "실패한 단일 작업은 새 파일을 추가하면 자동으로 교체됩니다."
+      : null;
+  const dropzoneTitle = !hasItems
+    ? "이미지를 끌어 놓거나 파일 선택으로 여러 개 추가하세요"
+    : shouldReplaceOnAdd
+      ? "다음 파일을 추가하면 새 작업으로 바로 시작합니다"
+      : "이미지를 더 추가하거나 현재 큐를 조정하세요";
+  const dropzoneHint = !hasItems
+    ? `지원 형식은 ${supportedImageTypesText}입니다. 붙여넣기 이미지는 이 페이지에서 바로 추가할 수 있고, 드롭 영역에 포커스한 뒤 Enter 또는 Space 로도 파일 선택 창을 열 수 있습니다.`
+    : shouldReplaceOnAdd
+      ? `새 파일을 선택, 드롭, 붙여넣기하면 현재 단일 작업을 자동으로 교체합니다. 여러 파일을 한 번에 고르면 이전 단일 세션 대신 새 배치로 시작합니다.`
+      : `추가한 파일은 현재 큐 뒤에 이어 붙습니다. ${supportedImageTypesText} 이미지를 다시 선택하거나 클립보드 붙여넣기로 바로 더할 수 있습니다.`;
+  const showClearQueueAction = hasItems && !shouldReplaceOnAdd;
   const startChecklist = toolVariant
     ? [
         "JPEG, PNG, WebP 이미지를 드래그, 파일 선택, 붙여넣기로 추가",
@@ -638,6 +668,21 @@ export function ToolShell({
     }
   }
 
+  const compressionOptionDescription =
+    isLosslessPngCompression
+      ? "PNG는 무손실 재저장이라 스크린샷, 차트, UI 이미지처럼 이미 최적화된 파일은 용량이 오히려 커질 수 있습니다. 더 작게 만들려면 WebP 또는 JPEG를 선택해 주세요."
+      : compressionOutputOptions.find((option) => option.value === outputFormat)
+          ?.description ?? "출력 형식을 선택해 압축 결과를 저장합니다.";
+  const selectedCompressionGrowthMessage =
+    isCompressTool &&
+    selectedItem &&
+    selectedResult &&
+    selectedResult.blob.size > selectedItem.file.size
+      ? `현재 설정에서는 원본보다 ${formatFileSize(
+          selectedResult.blob.size - selectedItem.file.size,
+        )} 커졌습니다. PNG 무손실 재저장일 수 있으니 더 작게 만들려면 WebP 또는 JPEG를 선택해 주세요.`
+      : null;
+
   function focusWorkspaceRegion(node: HTMLElement | null) {
     if (!node || typeof window === "undefined") {
       return;
@@ -668,6 +713,28 @@ export function ToolShell({
     };
   }, []);
 
+  function handleIncomingFiles(
+    files: Iterable<File> | ArrayLike<File> | null | undefined,
+    source: "drop" | "input" | "paste",
+  ) {
+    const replaceCurrentQueue = shouldReplaceOnAdd;
+    const acceptedCount = addFiles(
+      files,
+      source,
+      replaceCurrentQueue ? "replace" : "append",
+    );
+
+    if (acceptedCount > 0) {
+      setReadyForReplacement(false);
+
+      if (replaceCurrentQueue) {
+        window.setTimeout(() => {
+          focusWorkspaceRegion(optionPanelRef.current);
+        }, 120);
+      }
+    }
+  }
+
   const handleWindowPaste = useEffectEvent((event: ClipboardEvent) => {
     const target = event.target;
 
@@ -679,7 +746,7 @@ export function ToolShell({
       return;
     }
 
-    addFiles(getClipboardFiles(event.clipboardData), "paste");
+    handleIncomingFiles(getClipboardFiles(event.clipboardData), "paste");
   });
 
   useEffect(() => {
@@ -698,7 +765,39 @@ export function ToolShell({
     setQueueState({});
     setProcessingError(null);
     setProcessingNote(null);
-  }, [itemIdsSignature, processingSignature, variant]);
+    setReadyForReplacement(false);
+  }, [processingSignature, variant]);
+
+  useEffect(() => {
+    setQueueState((current) => {
+      if (items.length === 0) {
+        return {};
+      }
+
+      const nextEntries = Object.fromEntries(
+        items.flatMap((item) =>
+          current[item.id] ? [[item.id, current[item.id]]] : [],
+        ),
+      );
+      const currentKeys = Object.keys(current);
+      const nextKeys = Object.keys(nextEntries);
+
+      if (
+        currentKeys.length === nextKeys.length &&
+        currentKeys.every((key) => current[key] === nextEntries[key])
+      ) {
+        return current;
+      }
+
+      return nextEntries;
+    });
+    setProcessingError(null);
+    setProcessingNote(null);
+
+    if (items.length === 0) {
+      setReadyForReplacement(false);
+    }
+  }, [itemIdsSignature, items]);
 
   useEffect(() => {
     if (!selectedPreviewUrl) {
@@ -768,13 +867,18 @@ export function ToolShell({
       return;
     }
 
-    if (hasResults) {
+    if (!isProcessing && hasQueuedItems) {
+      setActiveStep("options");
+      return;
+    }
+
+    if (isProcessing || hasResults) {
       setActiveStep("export");
       return;
     }
 
     setActiveStep("options");
-  }, [hasResults, items.length]);
+  }, [hasQueuedItems, hasResults, isProcessing, items.length]);
 
   useEffect(() => {
     if (!hasItems) {
@@ -822,7 +926,7 @@ export function ToolShell({
   }
 
   function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
-    addFiles(event.currentTarget.files, "input");
+    handleIncomingFiles(event.currentTarget.files, "input");
     event.currentTarget.value = "";
   }
 
@@ -853,7 +957,7 @@ export function ToolShell({
 
     dragDepthRef.current = 0;
     setIsDragging(false);
-    addFiles(event.dataTransfer.files, "drop");
+    handleIncomingFiles(event.dataTransfer.files, "drop");
   }
 
   function handleQualityChange(event: ChangeEvent<HTMLInputElement>) {
@@ -1037,6 +1141,7 @@ export function ToolShell({
     setIsProcessing(true);
     setProcessingError(null);
     setProcessingNote(null);
+    setReadyForReplacement(false);
     setActiveStep("export");
     setQueueState(
       Object.fromEntries(
@@ -1129,6 +1234,15 @@ export function ToolShell({
     setIsProcessing(false);
   }
 
+  function moveToNextUploadStep() {
+    setReadyForReplacement(true);
+    setActiveStep("upload");
+
+    window.setTimeout(() => {
+      focusWorkspaceRegion(dropzoneRef.current);
+    }, 120);
+  }
+
   async function handleDownloadZip() {
     if (!toolVariant || successCount === 0) {
       return;
@@ -1153,6 +1267,10 @@ export function ToolShell({
         new Blob([archive], { type: "application/zip" }),
         createBatchZipFileName(toolVariant),
       );
+
+      if (items.length === 1 && successCount === 1) {
+        moveToNextUploadStep();
+      }
     } catch (error: unknown) {
       setProcessingError(
         error instanceof Error
@@ -1172,6 +1290,10 @@ export function ToolShell({
     }
 
     downloadBlob(result.blob, result.fileName);
+
+    if (items.length === 1 && selectedItemId === itemId) {
+      moveToNextUploadStep();
+    }
   }
 
   let statusByStep: Record<StepKey, string>;
@@ -1186,7 +1308,11 @@ export function ToolShell({
         items.length > 0 && targetMimeType
           ? `${items.length}개 파일에 ${getCompressionMimeTypeLabel(targetMimeType)} 형식과 ${
               isQualityEnabled ? `${quality}% 품질` : "무손실 재저장"
-            }을 일괄 적용합니다.`
+            }을 일괄 적용합니다.${
+              targetMimeType === "image/png"
+                ? " PNG 무손실 재저장은 원본보다 커질 수 있습니다."
+                : ""
+            }`
           : "먼저 압축할 이미지를 추가하면 배치 품질과 출력 형식을 선택할 수 있습니다.",
       export:
         hasResults
@@ -1261,6 +1387,10 @@ export function ToolShell({
     };
   }
 
+  const uploadStepMessage = repeatActionMessage ?? statusByStep.upload;
+  const currentStepMessage =
+    activeStep === "upload" ? uploadStepMessage : statusByStep[activeStep];
+
   function renderWorkflowSidebar() {
     if (!selectedItem || !selectedItemState) {
       return null;
@@ -1314,7 +1444,7 @@ export function ToolShell({
               ? `총 ${items.length}개 중 ${successCount}개 성공, ${errorCount}개 실패입니다.`
               : isProcessing
                 ? `${items.length}개 파일을 순서대로 처리하고 있습니다.`
-                : statusByStep[activeStep]}
+                : currentStepMessage}
           </p>
 
           <div className="tool-shell__actions tool-shell__actions--stack">
@@ -1328,7 +1458,20 @@ export function ToolShell({
                 >
                   {isProcessing ? "배치 처리 중..." : primaryActionLabel}
                 </button>
-                {selectedResult ? (
+                <button
+                  className={
+                    shouldPrioritizeZipDownload ||
+                    (hasResults && !selectedResult)
+                      ? "button-link"
+                      : "button-muted"
+                  }
+                  disabled={!canDownloadZip}
+                  onClick={handleDownloadZip}
+                  type="button"
+                >
+                  {isPreparingZip ? "ZIP 준비 중..." : "성공 파일 ZIP 다운로드"}
+                </button>
+                {selectedResult && !shouldPrioritizeZipDownload ? (
                   <button
                     className="button-link"
                     onClick={() => handleDownloadResult(selectedItem.id)}
@@ -1337,16 +1480,6 @@ export function ToolShell({
                     대표 결과 다운로드
                   </button>
                 ) : null}
-                <button
-                  className={
-                    hasResults && !selectedResult ? "button-link" : "button-muted"
-                  }
-                  disabled={!canDownloadZip}
-                  onClick={handleDownloadZip}
-                  type="button"
-                >
-                  {isPreparingZip ? "ZIP 준비 중..." : "성공 파일 ZIP 다운로드"}
-                </button>
               </>
             ) : (
               <>
@@ -1359,6 +1492,12 @@ export function ToolShell({
               </>
             )}
           </div>
+
+          {repeatActionMessage ? (
+            <p className="tool-shell__helper tool-shell__helper--next-action">
+              {repeatActionMessage}
+            </p>
+          ) : null}
 
           {showProgress ? (
             <div className="tool-shell__progress tool-shell__progress--compact">
@@ -1381,7 +1520,9 @@ export function ToolShell({
               <p className="tool-shell__helper" id={progressHintId}>
                 {processingCount > 0
                   ? `${processingCount}개 파일을 현재 처리 중입니다.`
-                  : `성공한 결과는 바로 개별 다운로드하거나 ZIP으로 한 번에 받을 수 있습니다.`}
+                  : shouldPrioritizeZipDownload
+                    ? `성공한 결과가 여러 개면 ZIP으로 한 번에 받고, 개별 파일은 아래 카드의 결과 다운로드 버튼으로 받을 수 있습니다.`
+                    : `성공한 결과는 바로 개별 다운로드하거나 ZIP으로 한 번에 받을 수 있습니다.`}
               </p>
             </div>
           ) : null}
@@ -1396,6 +1537,12 @@ export function ToolShell({
           {selectedItemState.status === "error" ? (
             <p className="tool-shell__helper tool-shell__helper--error">
               {selectedItemState.errorMessage}
+            </p>
+          ) : null}
+
+          {selectedCompressionGrowthMessage ? (
+            <p className="tool-shell__helper">
+              {selectedCompressionGrowthMessage}
             </p>
           ) : null}
 
@@ -1436,11 +1583,13 @@ export function ToolShell({
             className="tool-shell__dropzone"
             data-dragging={isDragging}
             data-has-items={hasItems}
+            data-ready-for-replacement={shouldReplaceOnAdd}
             onKeyDown={handleDropzoneKeyDown}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
+            ref={dropzoneRef}
             role="group"
             tabIndex={isProcessing ? -1 : 0}
           >
@@ -1466,7 +1615,7 @@ export function ToolShell({
               <button className="button-link" onClick={openFilePicker} type="button">
                 파일 선택
               </button>
-              {hasItems ? (
+              {showClearQueueAction ? (
                 <button
                   className="button-muted"
                   disabled={isProcessing}
@@ -1480,7 +1629,14 @@ export function ToolShell({
             <ul className="tool-shell__drop-highlights">
               <li>브라우저 안에서만 파일 보관 및 처리</li>
               <li>JPEG, PNG, WebP 파일만 허용</li>
-              <li>{getDropzoneCopy(variant, keepAspectRatio, skippedConvertCount)}</li>
+              <li>
+                {getDropzoneCopy(
+                  variant,
+                  keepAspectRatio,
+                  skippedConvertCount,
+                  shouldReplaceOnAdd,
+                )}
+              </li>
             </ul>
           </div>
 
@@ -1515,7 +1671,7 @@ export function ToolShell({
                   role="status"
                 >
                   <strong>{stepLabels[activeStep]}</strong>
-                  <p>{statusByStep[activeStep]}</p>
+                  <p>{currentStepMessage}</p>
                 </div>
                 <dl className="tool-shell__stat-list tool-shell__stat-list--compact">
                   <div>
@@ -1547,7 +1703,7 @@ export function ToolShell({
                   role="status"
                 >
                   <strong>{stepLabels.upload}</strong>
-                  <p>{statusByStep.upload}</p>
+                  <p>{uploadStepMessage}</p>
                 </div>
               </>
             )}
@@ -1632,8 +1788,7 @@ export function ToolShell({
               </label>
 
               <p className="tool-shell__helper">
-                {compressionOutputOptions.find((option) => option.value === outputFormat)
-                  ?.description ?? "출력 형식을 선택해 압축 결과를 저장합니다."}
+                {compressionOptionDescription}
               </p>
 
               <label className="tool-shell__field" htmlFor="compress-quality">

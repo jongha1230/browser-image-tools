@@ -441,6 +441,12 @@ img {
   transform: translateY(-1px);
 }
 
+.tool-shell__dropzone[data-ready-for-replacement="true"] {
+  border-color: rgba(36, 74, 57, 0.32);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(236, 244, 238, 0.92));
+}
+
 .tool-shell__dropzone:focus-visible {
   border-color: var(--accent-strong);
   background: rgba(36, 74, 57, 0.08);
@@ -841,6 +847,11 @@ img {
 
 .tool-shell__helper--error {
   color: #a1441b;
+  font-weight: 600;
+}
+
+.tool-shell__helper--next-action {
+  color: var(--accent-strong);
   font-weight: 600;
 }
 
