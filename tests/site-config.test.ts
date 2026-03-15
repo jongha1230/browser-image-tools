@@ -202,6 +202,17 @@ describe("site configuration", () => {
 
     expect(proxyResponse.headers.get("x-robots-tag")).toBeNull();
 
+    const sitemapEntries = sitemap();
+
+    expect(sitemapEntries).not.toEqual([]);
+    expect(
+      sitemapEntries.every(
+        (entry) =>
+          entry.url.startsWith("https://browser-image-tools.vercel.app/") &&
+          !entry.url.includes("/app/"),
+      ),
+    ).toBe(true);
+
     const rssResponse = await rss();
     const rssXml = await rssResponse.text();
 
@@ -213,6 +224,7 @@ describe("site configuration", () => {
     expect(rssXml).toContain(
       "<atom:link href=\"https://browser-image-tools.vercel.app/rss.xml\" rel=\"self\" type=\"application/rss+xml\" />",
     );
+    expect(rssXml).not.toContain("/app/guides/");
   });
 
   it("builds production-only canonical redirects once a custom domain is configured", async () => {

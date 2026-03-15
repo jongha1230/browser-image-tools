@@ -9,8 +9,8 @@
 - Production demo: [https://browser-image-tools.vercel.app](https://browser-image-tools.vercel.app)
 - Proof assets package: [docs/proof-assets.md](./docs/proof-assets.md)
 - 캡처 기준일: 2026년 3월 15일, Vercel production alias 기준
-- 현재 배포는 demo-first 설정이라 `noindex`를 유지합니다.
-- 필요하면 Production 환경에서 `SITE_URL`, `NEXT_PUBLIC_SITE_URL`, `ALLOW_VERCEL_APP_INDEXING=true`를 함께 설정해 안정적인 `vercel.app` 주소를 임시 public canonical host로 전환할 수 있습니다.
+- 현재 배포는 Production `vercel.app`를 임시 public canonical host로 사용하는 공개 제출 모드입니다.
+- 이후 custom domain을 연결하면 Search Console, Search Advisor, canonical, sitemap 검증을 새 host 기준으로 다시 수행해야 합니다.
 
 ## 현재 구현된 기능
 
@@ -85,10 +85,9 @@ npm run dev
 ## Vercel 배포 메모
 
 - 공개 데모 단계에서는 Vercel Production 배포를 안정적인 공유용 `vercel.app` 주소로 사용합니다.
-- demo-first 운영을 유지하려면 `SITE_URL`, `NEXT_PUBLIC_SITE_URL`, `ALLOW_VERCEL_APP_INDEXING`를 모두 비워 둡니다.
-- 이 상태에서는 사이트가 `noindex` 메타데이터와 `X-Robots-Tag` 응답 헤더를 함께 내보내고, `robots.txt`는 전체 차단, `sitemap.xml`은 빈 목록, `rss.xml`은 `404`로 응답합니다.
-- Production `vercel.app`를 임시 public canonical host로 쓸 때는 Production 환경 변수 `SITE_URL`과 `NEXT_PUBLIC_SITE_URL`을 정확한 `https://browser-image-tools.vercel.app` 원본으로 맞추고 `ALLOW_VERCEL_APP_INDEXING=true`를 함께 설정합니다.
+- 현재 운영 기준은 Production `vercel.app`를 임시 public canonical host로 두고, Production 환경 변수 `SITE_URL`과 `NEXT_PUBLIC_SITE_URL`을 정확한 `https://browser-image-tools.vercel.app` 원본으로 맞추고 `ALLOW_VERCEL_APP_INDEXING=true`를 함께 두는 방식입니다.
 - 이 모드에서는 canonical, `robots.txt`, `sitemap.xml`, `rss.xml`, Open Graph URL이 모두 Production `vercel.app` 기준으로 열리고, Preview는 계속 비색인으로 유지해야 합니다.
+- demo-first 운영으로 되돌리려면 `SITE_URL`, `NEXT_PUBLIC_SITE_URL`, `ALLOW_VERCEL_APP_INDEXING`를 모두 비워 두고 `noindex`, 전체 차단 `robots.txt`, 빈 `sitemap.xml`, `404` `rss.xml`이 복구되는지 다시 확인합니다.
 - 최종 도메인을 연결한 뒤에는 Production 환경 변수 `SITE_URL`과 `NEXT_PUBLIC_SITE_URL`을 같은 `https://` 커스텀 원본으로 바꾸고, `ALLOW_VERCEL_APP_INDEXING`는 비우거나 `false`로 돌리는 편이 명확합니다.
 - 자세한 운영 절차는 [docs/vercel-launch.md](./docs/vercel-launch.md)를 확인하면 됩니다.
 
