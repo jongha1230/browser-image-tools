@@ -9,7 +9,8 @@ import { createPageMetadata, getPageMetadataEntry } from "@/lib/site-metadata";
 export const metadata: Metadata = createPageMetadata(getPageMetadataEntry("/guides"));
 
 export default function GuidesPage() {
-  const featuredGuides = guideRoutes.filter((guide) => guide.cluster === "cluster-01");
+  const featuredGuides = guideRoutes.filter((guide) => guide.cluster === "cluster-02");
+  const firstWaveGuides = guideRoutes.filter((guide) => guide.cluster === "cluster-01");
 
   return (
     <PageLayout breadcrumbs={[{ href: "/", label: "홈" }, { label: "가이드" }]}>
@@ -32,16 +33,41 @@ export default function GuidesPage() {
       </PageHero>
 
       <PageSection
-        title="이번에 먼저 읽을 실전 클러스터"
+        title="새로 추가한 실전 클러스터"
         intro={
           <p>
-            리사이즈와 압축 순서, 투명 배경 변환, 배치 처리 전 점검처럼 실제
-            작업 흐름에서 바로 부딪히는 질문을 먼저 모았습니다.
+            블로그 업로드 준비, 상품 썸네일 정리, 반복 저장 화질 저하, PNG 선택
+            실수처럼 두 번째 콘텐츠 묶음에서 더 자주 막히는 질문을 먼저
+            모았습니다.
           </p>
         }
       >
         <div className="card-grid">
           {featuredGuides.map((guide) => (
+            <article className="card" key={guide.slug}>
+              <h3>{guide.title}</h3>
+              <p>{guide.description}</p>
+              <p>주제: {guide.categoryLabel}</p>
+              <p>예상 읽기 시간: {guide.readTime}</p>
+              <Link className="card__link" href={guide.href}>
+                가이드 읽기
+              </Link>
+            </article>
+          ))}
+        </div>
+      </PageSection>
+
+      <PageSection
+        title="이전에 정리한 실전 클러스터"
+        intro={
+          <p>
+            작업 순서, 투명 배경 변환, 배치 처리 전 점검처럼 기본 흐름을 먼저
+            잡아 주는 문서도 함께 이어서 볼 수 있습니다.
+          </p>
+        }
+      >
+        <div className="card-grid">
+          {firstWaveGuides.map((guide) => (
             <article className="card" key={guide.slug}>
               <h3>{guide.title}</h3>
               <p>{guide.description}</p>

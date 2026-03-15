@@ -2,7 +2,7 @@ export const repositoryUrl = "https://github.com/jongha1230/browser-image-tools"
 export const repositoryIssuesUrl = `${repositoryUrl}/issues`;
 export const contactEmail = "browserimagetools@gmail.com";
 export const contactEmailHref = `mailto:${contactEmail}`;
-export const siteUpdatedAt = "2026-03-16T09:00:00+09:00";
+export const siteUpdatedAt = "2026-03-16T15:30:00+09:00";
 
 export type ToolSlug =
   | "compress-image"
@@ -16,12 +16,16 @@ export type GuideSlug =
   | "why-converted-images-get-larger"
   | "batch-processing-preflight-checklist"
   | "browser-local-image-processing-limits"
+  | "blog-cms-image-prep-checklist"
+  | "product-thumbnail-image-settings"
+  | "avoid-repeat-export-quality-loss"
+  | "when-png-is-the-wrong-choice"
   | "image-compression-basics"
   | "webp-vs-jpeg-vs-png"
   | "remove-exif-for-privacy"
   | "batch-resize-checklist";
 
-export type GuideCluster = "core" | "cluster-01";
+export type GuideCluster = "core" | "cluster-01" | "cluster-02";
 
 type ToolRouteBase<TSlug extends ToolSlug> = {
   slug: TSlug;
@@ -72,6 +76,10 @@ export type GuideRoute =
   | GuideRouteBase<"why-converted-images-get-larger">
   | GuideRouteBase<"batch-processing-preflight-checklist">
   | GuideRouteBase<"browser-local-image-processing-limits">
+  | GuideRouteBase<"blog-cms-image-prep-checklist">
+  | GuideRouteBase<"product-thumbnail-image-settings">
+  | GuideRouteBase<"avoid-repeat-export-quality-loss">
+  | GuideRouteBase<"when-png-is-the-wrong-choice">
   | GuideRouteBase<"image-compression-basics">
   | GuideRouteBase<"webp-vs-jpeg-vs-png">
   | GuideRouteBase<"remove-exif-for-privacy">
@@ -257,6 +265,7 @@ export const guideRoutes = [
       "batch-processing-preflight-checklist",
       "why-converted-images-get-larger",
       "batch-resize-checklist",
+      "avoid-repeat-export-quality-loss",
     ],
   },
   {
@@ -459,6 +468,7 @@ export const guideRoutes = [
       "resize-or-compress-first",
       "browser-local-image-processing-limits",
       "batch-resize-checklist",
+      "blog-cms-image-prep-checklist",
     ],
   },
   {
@@ -534,6 +544,291 @@ export const guideRoutes = [
     ],
   },
   {
+    slug: "blog-cms-image-prep-checklist",
+    href: "/guides/blog-cms-image-prep-checklist",
+    categoryLabel: "블로그 / CMS",
+    cluster: "cluster-02",
+    title: "블로그나 CMS 업로드 전에 이미지부터 이렇게 정리하세요",
+    description:
+      "본문 이미지, 대표 이미지, 캡처를 블로그나 CMS에 올리기 전에 어떤 순서로 손봐야 하는지 정리한 가이드입니다.",
+    metadataDescription:
+      "블로그와 CMS 업로드 전에 대표 이미지, 본문 이미지, 캡처 파일을 리사이즈·압축·포맷 변환 기준으로 정리하는 한국어 가이드입니다.",
+    intro:
+      "블로그 에디터와 CMS는 업로드 후 자동 리사이즈를 해 주기도 하지만, 결과가 항상 예측 가능하지는 않습니다. 미리 픽셀 크기와 형식을 정리해 두면 업로드 실패와 본문 흐림을 훨씬 줄일 수 있습니다.",
+    readTime: "5분",
+    publishedAt: "2026-03-16T15:30:00+09:00",
+    updatedAt: "2026-03-16T15:30:00+09:00",
+    focusPoints: [
+      "대표 이미지와 본문 이미지는 같은 크기와 용량 목표로 묶지 않는 편이 안전합니다.",
+      "사진 본문, 캡처, 배너는 서로 다른 형식이 더 잘 맞습니다.",
+      "에디터가 자동으로 줄여 보여 줘도 원본이 너무 크면 업로드 속도와 재작업만 늘어납니다.",
+    ],
+    sections: [
+      {
+        title: "먼저 들어갈 자리를 나누세요",
+        paragraphs: [
+          "블로그나 CMS는 대표 이미지, 본문 삽입 이미지, 캡처, 배너가 각각 다른 크기로 들어가는 경우가 많습니다. 업로드 전에 자리를 먼저 나눠 두면 한 묶음에 같은 기준을 적용하기 쉬워집니다.",
+          "특히 대표 이미지는 카드나 목록에서 먼저 보이고, 본문 이미지는 실제 읽는 화면 폭에 맞춰 보입니다. 같은 파일 하나로 두 자리를 모두 해결하려 하면 용량도 애매하고 선명도도 애매해지기 쉽습니다.",
+        ],
+        bullets: [
+          "대표 이미지와 본문 삽입 이미지를 분리해 목록 만들기",
+          "가로 폭이 고정된 템플릿이면 그 규격부터 확인하기",
+          "본문 캡처와 사진 파일을 같은 묶음으로 처리하지 않기",
+          "에디터 축소 표시만으로 끝나는지 실제 리사이즈가 필요한지 확인하기",
+        ],
+      },
+      {
+        title: "사진, 캡처, 배너를 같은 형식으로 맞추지 마세요",
+        paragraphs: [
+          "본문 사진은 JPEG나 WebP가 더 현실적인 경우가 많고, 텍스트가 선명한 캡처는 PNG나 WebP가 더 깔끔할 수 있습니다. 형식 선택을 한 번에 통일하려 하면 어느 한쪽은 손해를 보기 쉽습니다.",
+          "배경이 있는 사진과 투명 배경 배너도 분리해서 생각하는 편이 낫습니다. 특히 블로그 스킨이나 CMS 카드가 흰색이 아닐 수 있다면 투명 배경 유지 여부를 먼저 확인해야 합니다.",
+        ],
+        bullets: [
+          "사진 중심 본문은 JPEG 또는 WebP부터 비교하기",
+          "텍스트가 많은 캡처는 PNG 또는 WebP로 먼저 확인하기",
+          "배너와 로고는 투명 배경 유지가 필요한지 먼저 보기",
+          "변환 후 용량이 기대보다 크면 형식과 해상도를 같이 다시 보기",
+        ],
+      },
+      {
+        title: "게시 전에 마지막으로 볼 것",
+        paragraphs: [
+          "업로드 직전에는 파일 크기 숫자보다 실제 편집기 미리보기를 보는 편이 중요합니다. 모바일 폭에서 본문 캡처의 글자가 읽히는지, 대표 이미지가 카드 영역에서 지나치게 답답해 보이지 않는지를 먼저 확인하세요.",
+          "또한 업로드 한도에 맞추려고 이미지를 여러 번 다시 저장하기 시작하면 품질이 빨리 무너질 수 있습니다. 대표 이미지 1장과 본문 이미지 1장으로 먼저 시험한 뒤 전체에 적용하는 편이 훨씬 안전합니다.",
+        ],
+        bullets: [
+          "대표 이미지 1장과 본문 캡처 1장으로 먼저 업로드 테스트하기",
+          "모바일 미리보기에서 텍스트와 상품 가장자리 흐림 확인하기",
+          "업로드 한도가 있으면 압축 후 결과 용량 다시 보기",
+          "변환된 파일명이 헷갈리지 않게 정리된 상태로 저장하기",
+        ],
+      },
+    ],
+    relatedTools: ["resize-image", "compress-image", "convert-image"],
+    relatedGuides: [
+      "resize-or-compress-first",
+      "webp-vs-jpeg-vs-png",
+      "batch-processing-preflight-checklist",
+    ],
+  },
+  {
+    slug: "product-thumbnail-image-settings",
+    href: "/guides/product-thumbnail-image-settings",
+    categoryLabel: "쇼핑몰 이미지",
+    cluster: "cluster-02",
+    title: "상품 썸네일과 리스트 이미지를 맞출 때 설정 기준",
+    description:
+      "쇼핑몰 썸네일, 상품 리스트 카드, 대표 이미지를 여러 장 준비할 때 규격과 형식을 정하는 기준을 정리한 가이드입니다.",
+    metadataDescription:
+      "상품 썸네일과 리스트 이미지를 준비할 때 해상도, 배경, 압축 강도, 포맷 선택을 어떻게 맞출지 설명하는 한국어 가이드입니다.",
+    intro:
+      "상품 이미지는 한 장만 예쁘게 만드는 작업이 아니라, 여러 장이 나란히 놓였을 때 일관되게 보여야 하는 작업입니다. 리스트용과 확대용을 같은 파일 하나로 해결하려 하면 품질과 용량 둘 다 애매해지기 쉽습니다.",
+    readTime: "5분",
+    publishedAt: "2026-03-16T15:30:00+09:00",
+    updatedAt: "2026-03-16T15:30:00+09:00",
+    focusPoints: [
+      "리스트 썸네일은 일관성이 우선이고, 확대용 상세 이미지는 별도 파생본으로 보는 편이 안전합니다.",
+      "배경 제거 컷과 일반 사진은 같은 형식과 압축 설정으로 묶지 않는 편이 낫습니다.",
+      "한 상품군에서 대표 샘플 2~3장만 먼저 맞춰 보면 배치 실수를 크게 줄일 수 있습니다.",
+    ],
+    sections: [
+      {
+        title: "썸네일용과 확대용을 분리해서 생각하세요",
+        paragraphs: [
+          "상품 목록 카드에서 보이는 썸네일은 일정한 크기와 빠른 로딩이 중요합니다. 반면 상세 페이지에서 확대해 보는 이미지는 디테일 유지가 더 중요하므로 같은 파일 하나로 두 역할을 모두 맡기지 않는 편이 낫습니다.",
+          "특히 확대가 필요한 상품이라면 리스트 썸네일을 먼저 작게 맞추고, 상세용은 조금 더 큰 파생본으로 따로 남겨 두는 흐름이 재작업을 줄입니다.",
+        ],
+        bullets: [
+          "리스트 카드에서 실제로 보이는 최대 크기 확인하기",
+          "상세 확대용은 별도 원본 또는 큰 파생본으로 남기기",
+          "작은 썸네일 파일을 다른 용도로 다시 키워 쓰지 않기",
+          "업로드 슬롯별 권장 규격을 먼저 메모해 두기",
+        ],
+      },
+      {
+        title: "배경과 가장자리 특성에 따라 형식을 고르세요",
+        paragraphs: [
+          "일반 상품 사진은 JPEG나 WebP가 훨씬 가볍게 정리되는 경우가 많습니다. 반대로 누끼 이미지, 로고, 단색 배경 위에 떠 있는 상품 컷은 PNG나 WebP가 더 자연스러울 수 있습니다.",
+          "중요한 점은 한 번 정한 형식을 모든 이미지에 밀어 넣지 않는 것입니다. 흰 배경 제품 사진과 투명 배경 소스는 비교 기준 자체가 다르기 때문입니다.",
+        ],
+        bullets: [
+          "일반 상품 사진은 JPEG 또는 WebP부터 비교하기",
+          "투명 배경 상품 컷은 PNG 또는 WebP로 먼저 검토하기",
+          "배경이 섞인 파일과 누끼 파일을 같은 배치 큐에 넣지 않기",
+          "리스트용은 용량 우선, 상세용은 확대 품질 우선으로 보기",
+        ],
+      },
+      {
+        title: "배치 리사이즈에서 자주 망가지는 부분",
+        paragraphs: [
+          "가로형, 세로형, 정사각형 원본이 섞여 있는데 모두 같은 가로·세로 값으로 밀어 넣으면 왜곡된 결과가 나오기 쉽습니다. 이 사이트는 크기 조절은 지원하지만 크롭은 제공하지 않기 때문에, 비율이 다른 파일은 더더욱 묶음을 나누는 편이 낫습니다.",
+          "규격을 엄격하게 맞춰야 하는 플랫폼이라면 비율 유지 여부를 먼저 결정하고 샘플 몇 장으로 실제 리스트 카드에 올려 보는 편이 안전합니다.",
+        ],
+        bullets: [
+          "비율이 다른 원본은 별도 묶음으로 나누기",
+          "비율 유지를 끌 때는 왜곡 허용 범위를 먼저 확인하기",
+          "리스트 카드에서 잘 보이는지 샘플 업로드로 먼저 확인하기",
+          "한 번에 전체 상품군에 적용하기 전에 대표 파일로 시험하기",
+        ],
+      },
+      {
+        title: "업로드 전 샘플 검수 순서",
+        paragraphs: [
+          "썸네일 작업은 숫자보다 비교 화면이 중요합니다. 실제 상품 목록처럼 여러 장을 나란히 놓고 봤을 때, 특정 상품만 유독 흐리거나 지나치게 무거운 파일로 남지 않았는지 확인해야 합니다.",
+          "이 검수는 데스크톱뿐 아니라 모바일 목록에서도 해 보는 편이 좋습니다. 작은 화면에서 텍스트 라벨과 상품 윤곽이 먼저 무너지는 경우가 많기 때문입니다.",
+        ],
+        bullets: [
+          "대표 상품 2~3개를 같은 리스트 화면에서 비교하기",
+          "모바일 목록에서 상품 윤곽과 텍스트 가독성 확인하기",
+          "확대용 상세 이미지와 썸네일이 섞여 저장되지 않았는지 보기",
+          "결과 파일명을 상품군 기준으로 정리한 뒤 내려받기",
+        ],
+      },
+    ],
+    relatedTools: ["resize-image", "compress-image", "convert-image"],
+    relatedGuides: [
+      "batch-resize-checklist",
+      "image-compression-basics",
+      "transparent-image-conversion-checklist",
+    ],
+  },
+  {
+    slug: "avoid-repeat-export-quality-loss",
+    href: "/guides/avoid-repeat-export-quality-loss",
+    categoryLabel: "품질 유지",
+    cluster: "cluster-02",
+    title: "여러 번 저장할수록 화질이 무너지는 이유와 피하는 법",
+    description:
+      "같은 이미지를 반복해서 압축·리사이즈·변환할 때 품질이 왜 무너지는지와 손실을 줄이는 순서를 정리한 가이드입니다.",
+    metadataDescription:
+      "반복 저장과 재변환으로 이미지 품질이 나빠지는 이유, 그리고 브라우저 도구에서 손실을 줄이는 작업 순서를 설명하는 한국어 가이드입니다.",
+    intro:
+      "문제는 한 번의 압축보다, 작은 수정이 생길 때마다 같은 파일을 다시 내보내는 습관입니다. 저장 횟수가 늘수록 블록 노이즈, 텍스트 번짐, 가장자리 깨짐이 조금씩 누적됩니다.",
+    readTime: "4분",
+    publishedAt: "2026-03-16T15:30:00+09:00",
+    updatedAt: "2026-03-16T15:30:00+09:00",
+    focusPoints: [
+      "반복 재저장은 한 번의 강한 설정보다 더 지저분한 결과를 만들 수 있습니다.",
+      "최종 사용처가 정해질 때까지는 원본이나 큰 마스터를 따로 두는 편이 안전합니다.",
+      "작은 이미지를 다시 키우거나 PNG와 JPEG를 여러 번 오가도 품질은 돌아오지 않습니다.",
+    ],
+    sections: [
+      {
+        title: "품질이 무너지는 대표 패턴",
+        paragraphs: [
+          "가장 흔한 실수는 JPEG를 한 번 압축한 뒤, 다시 크기를 줄이고, 다시 다른 서비스용으로 저장하는 식으로 같은 파일을 계속 돌려 쓰는 것입니다. 첫 번째 저장에서는 괜찮아 보여도 두세 번 지나면 텍스트 주변과 얇은 선이 먼저 무너집니다.",
+          "캡처 이미지를 JPEG로 바꿨다가 다시 PNG로 돌리는 것도 품질을 복구하는 방법이 아닙니다. 한 번 손실된 가장자리는 형식을 다시 바꿔도 원래 상태로 돌아오지 않습니다.",
+        ],
+        bullets: [
+          "이미 압축된 JPEG를 다시 압축해서 저장하기",
+          "작은 썸네일을 다른 용도로 다시 키워 쓰기",
+          "PNG와 JPEG, WebP를 여러 번 오가며 비교하기",
+          "플랫폼마다 다른 파일을 만들면서 같은 파생본을 재사용하기",
+        ],
+      },
+      {
+        title: "원본 한 장, 파생본 여러 장으로 나누세요",
+        paragraphs: [
+          "품질 손실을 줄이는 가장 쉬운 방법은 손대지 않은 원본이나 큰 마스터를 따로 두고, 최종 사용처별 파생본만 새로 만드는 것입니다. 이렇게 하면 블로그용, 썸네일용, 메신저용 파일을 각각 다시 만들더라도 손실이 누적되지 않습니다.",
+          "특히 여러 플랫폼에 올릴 예정이라면 가장 먼저 해야 할 일은 마스터 보관입니다. 용량이 조금 더 들더라도, 다시 시작할 기준점이 있으면 결과가 훨씬 안정적입니다.",
+        ],
+        bullets: [
+          "원본 또는 큰 마스터 파일은 따로 보관하기",
+          "최종 사용처마다 새 파생본을 원본에서 다시 만들기",
+          "한 번 만든 작은 파일을 다른 작업의 출발점으로 쓰지 않기",
+          "파일명에 용도와 규격을 붙여 파생본을 구분하기",
+        ],
+      },
+      {
+        title: "이 사이트에서 작업할 때 손실을 줄이는 순서",
+        paragraphs: [
+          "최종 픽셀 규격이 정해져 있다면 먼저 크기를 맞추고, 형식이 바뀌어야 하는 이유가 있을 때만 포맷 변환을 거친 뒤, 마지막에 필요한 만큼만 압축하는 편이 예측하기 쉽습니다.",
+          "반대로 해상도를 유지해야 하는 파일은 압축만 먼저 시험하고, 그 결과가 부족할 때만 형식 변환이나 리사이즈를 검토하세요. 핵심은 같은 파생본을 계속 다시 저장하지 않는 것입니다.",
+        ],
+        bullets: [
+          "최종 규격이 있으면 리사이즈를 먼저 보기",
+          "형식 변경은 호환성이나 투명도 이유가 있을 때만 적용하기",
+          "최종본 직전에 한 번만 압축 강도를 조정하기",
+          "대표 파일로 먼저 확인한 뒤 같은 설정을 전체에 적용하기",
+        ],
+      },
+    ],
+    relatedTools: ["compress-image", "resize-image", "convert-image"],
+    relatedGuides: [
+      "resize-or-compress-first",
+      "why-converted-images-get-larger",
+      "image-compression-basics",
+    ],
+  },
+  {
+    slug: "when-png-is-the-wrong-choice",
+    href: "/guides/when-png-is-the-wrong-choice",
+    categoryLabel: "포맷 선택",
+    cluster: "cluster-02",
+    title: "PNG가 항상 안전한 선택은 아닌 이유",
+    description:
+      "PNG를 습관처럼 고르면 오히려 업로드 용량과 작업 속도가 나빠지는 상황을 이미지 유형별로 정리한 가이드입니다.",
+    metadataDescription:
+      "PNG가 유리한 경우와 손해인 경우, 사진·썸네일·캡처마다 JPEG와 WebP로 바꿔 볼 기준을 설명하는 한국어 가이드입니다.",
+    intro:
+      "PNG는 선명하고 익숙해서 기본값처럼 쓰이지만, 실제 업로드에서는 필요 이상으로 큰 파일을 만들기 쉽습니다. 투명 배경이나 텍스트 캡처가 아니라면 먼저 PNG가 꼭 필요한지부터 다시 보는 편이 낫습니다.",
+    readTime: "4분",
+    publishedAt: "2026-03-16T15:30:00+09:00",
+    updatedAt: "2026-03-16T15:30:00+09:00",
+    focusPoints: [
+      "투명 배경과 선명한 UI 캡처가 아니라면 PNG가 과할 수 있습니다.",
+      "사진성 이미지와 상품 썸네일은 JPEG 또는 WebP가 더 현실적인 경우가 많습니다.",
+      "PNG 결과가 무겁다면 압축 강도보다 형식 선택을 먼저 다시 봐야 합니다.",
+    ],
+    sections: [
+      {
+        title: "PNG가 맞는 경우부터 분리하세요",
+        paragraphs: [
+          "PNG는 투명 배경, 선명한 텍스트, 로고, UI 캡처처럼 가장자리 보존이 중요한 파일에 잘 맞습니다. 이런 이미지까지 무조건 JPEG로 밀어 넣으면 배경 손실이나 가장자리 번짐이 먼저 눈에 띕니다.",
+          "즉 PNG가 나쁜 것이 아니라, 정말 필요한 파일과 습관적으로 PNG를 쓰는 파일을 구분하는 것이 중요합니다.",
+        ],
+        bullets: [
+          "투명 배경이 필요한 로고와 상품 컷",
+          "글자가 선명해야 하는 화면 캡처",
+          "편집 원본처럼 다시 손볼 가능성이 큰 그래픽",
+          "배경색이 자주 바뀌는 배너와 UI 자산",
+        ],
+      },
+      {
+        title: "PNG가 손해가 되는 장면",
+        paragraphs: [
+          "일반 사진, 블로그 본문 이미지, 쇼핑몰 썸네일처럼 투명도가 필요 없는 파일은 PNG가 지나치게 무거워질 수 있습니다. 이 경우에는 JPEG나 WebP로 바꿔도 육안 차이는 크지 않은데, 업로드 시간과 용량은 훨씬 줄어드는 경우가 많습니다.",
+          "특히 수십 장을 한꺼번에 처리하는 배치 작업에서는 PNG 선택 하나 때문에 전체 다운로드가 느려지거나 ZIP 파일이 필요 이상으로 커질 수 있습니다.",
+        ],
+        bullets: [
+          "일반 사진 중심의 블로그 본문 이미지",
+          "배경이 고정된 쇼핑몰 썸네일",
+          "메신저 전송용 상품 사진과 행사 사진",
+          "업로드 용량 제한이 빡빡한 CMS와 커뮤니티 게시판",
+        ],
+      },
+      {
+        title: "형식을 바꿀 때 실수 줄이기",
+        paragraphs: [
+          "PNG를 다른 형식으로 바꿀 때는 파일 크기만 보지 말고 배경 손실과 글자 가독성도 같이 확인해야 합니다. 특히 투명 배경이 숨어 있는 파일은 밝은 배경과 어두운 배경 위에서 모두 확인하는 편이 안전합니다.",
+          "또한 비교를 위해 여러 형식을 만든 뒤, 다시 그 파생본을 출발점으로 쓰지 않는 것이 좋습니다. 원본에서 각 형식을 다시 만들어야 판단이 정확해집니다.",
+        ],
+        bullets: [
+          "투명 배경이 숨어 있는지 먼저 확인하기",
+          "밝은 배경과 어두운 배경에서 미리보기 비교하기",
+          "JPEG와 WebP 결과를 원본 기준으로 각각 비교하기",
+          "한 번 변환한 파생본을 다시 재변환하지 않기",
+        ],
+      },
+    ],
+    relatedTools: ["convert-image", "compress-image"],
+    relatedGuides: [
+      "webp-vs-jpeg-vs-png",
+      "transparent-image-conversion-checklist",
+      "why-converted-images-get-larger",
+    ],
+  },
+  {
     slug: "image-compression-basics",
     href: "/guides/image-compression-basics",
     categoryLabel: "압축 기준",
@@ -599,6 +894,7 @@ export const guideRoutes = [
       "resize-or-compress-first",
       "why-converted-images-get-larger",
       "webp-vs-jpeg-vs-png",
+      "when-png-is-the-wrong-choice",
     ],
   },
   {
@@ -666,6 +962,7 @@ export const guideRoutes = [
       "transparent-image-conversion-checklist",
       "why-converted-images-get-larger",
       "image-compression-basics",
+      "when-png-is-the-wrong-choice",
     ],
   },
   {
@@ -801,6 +1098,7 @@ export const guideRoutes = [
       "batch-processing-preflight-checklist",
       "resize-or-compress-first",
       "browser-local-image-processing-limits",
+      "product-thumbnail-image-settings",
     ],
   },
 ] satisfies GuideRoute[];
@@ -818,6 +1116,10 @@ export const requiredRoutes = [
   "/guides/why-converted-images-get-larger",
   "/guides/batch-processing-preflight-checklist",
   "/guides/browser-local-image-processing-limits",
+  "/guides/blog-cms-image-prep-checklist",
+  "/guides/product-thumbnail-image-settings",
+  "/guides/avoid-repeat-export-quality-loss",
+  "/guides/when-png-is-the-wrong-choice",
   "/guides/image-compression-basics",
   "/guides/webp-vs-jpeg-vs-png",
   "/guides/remove-exif-for-privacy",
