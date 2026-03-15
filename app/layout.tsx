@@ -1,5 +1,7 @@
 import "./globals.css";
 
+import type { ReactNode } from "react";
+
 import { ImageUploadProvider } from "@/components/image-upload-provider";
 import { SiteContainer } from "@/components/site-container";
 import { SiteFooter } from "@/components/site-footer";
@@ -8,7 +10,11 @@ import { rootMetadata } from "@/lib/site-metadata";
 
 export const metadata = rootMetadata;
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+type RootLayoutProps = Readonly<{
+  children: ReactNode;
+}>;
+
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="ko">
       <body>
