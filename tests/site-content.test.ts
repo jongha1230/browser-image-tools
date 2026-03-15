@@ -96,9 +96,9 @@ describe("site content scaffold", () => {
       canonical: "https://browser-image-tools.example/tools",
     });
     expect(metadata.openGraph).toMatchObject({
-      title: "이미지 도구 허브",
+      title: "이미지 도구 모음",
       description:
-        "이미지 압축, 크기 조절, 포맷 변환, EXIF 제거 도구를 실제 라우트로 모아 둔 허브 페이지입니다.",
+        "이미지 압축, 크기 조절, 포맷 변환, EXIF 제거 도구를 작업별로 바로 고를 수 있게 모아 둔 페이지입니다.",
       locale: "ko_KR",
       siteName: "브라우저 이미지 툴",
       type: "website",

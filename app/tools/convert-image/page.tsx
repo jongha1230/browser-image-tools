@@ -23,11 +23,15 @@ export default function ConvertImagePage() {
         { label: tool.shortLabel },
       ]}
     >
-      <PageHero eyebrow="Convert Image" title={tool.title}>
+      <PageHero eyebrow="이미지 포맷 변환 도구" title={tool.title}>
         <p>
-          {tool.description} {tool.intro} 여러 이미지를 브라우저 안에서 JPEG,
-          PNG, WebP 가운데 다른 형식으로 다시 저장하고, 원본과 결과 정보를
-          비교한 뒤 성공한 파일을 ZIP으로 한 번에 다운로드할 수 있습니다.
+          업로드 호환성을 맞추거나 파일 형식을 정리할 때 쓰는 도구입니다. 여러
+          장을 한 번에 JPEG, PNG, WebP 가운데 다른 형식으로 바꾸고 원본과 결과
+          정보를 나란히 비교할 수 있습니다.
+        </p>
+        <p>
+          투명 배경 유지 여부와 품질 차이를 확인하면서 필요한 결과만 골라 저장할
+          수 있습니다.
         </p>
         <div className="hero__actions">
           <a className="button-link" href={`#${workspaceId}`}>
@@ -41,46 +45,45 @@ export default function ConvertImagePage() {
 
       <ToolShell
         title={tool.title}
-        description="여러 이미지의 형식을 로컬에서 JPEG, PNG, WebP 중 다른 형식으로 변환하고, 전후 정보를 비교한 뒤 성공한 결과를 개별 또는 ZIP으로 다운로드합니다."
+        description="여러 이미지의 형식을 브라우저 안에서 JPEG, PNG, WebP 중 다른 형식으로 바꾸고 결과를 개별 저장 또는 ZIP 다운로드합니다."
         primaryActionLabel="이미지 포맷 변환하기"
         sectionId={workspaceId}
         variant="convert"
       />
 
       <PageSection
-        title="이미지 포맷 변환이 하는 일"
+        title="이럴 때 쓰면 좋습니다"
         intro={
           <p>
-            포맷 변환은 같은 이미지를 다른 저장 방식으로 다시 인코딩해 호환성,
-            투명도 유지, 파일 크기 최적화 목적에 맞는 결과 파일을 만드는
-            작업입니다.
+            포맷 변환은 같은 이미지를 다른 저장 방식으로 다시 만들어 호환성,
+            투명 배경 유지, 파일 크기 기준을 맞추는 작업입니다.
           </p>
         }
       >
         <div className="detail-grid">
           <div className="card">
-            <h3>지원 형식</h3>
+            <h3>업로드 형식 맞추기</h3>
             <p>
-              입력과 출력은 JPEG, PNG, WebP만 지원합니다. 변환은 현재 브라우저
-              탭 안에서만 이뤄지며 서버 업로드가 없습니다.
+              특정 서비스가 JPEG나 PNG만 받는 경우, 여러 파일의 형식을 한 번에
+              맞춰 올리기 쉽게 정리할 수 있습니다.
             </p>
           </div>
           <div className="card">
-            <h3>품질 조절</h3>
+            <h3>용량과 호환성 조절</h3>
             <p>
-              JPEG와 WebP는 품질 슬라이더를 조절할 수 있고, PNG는 무손실 저장
-              방식으로 다시 생성됩니다.
+              JPEG와 WebP는 품질 조절이 가능하고, PNG는 무손실 저장으로 다시
+              생성됩니다.
             </p>
           </div>
           <div className="card">
-            <h3>투명 배경 처리</h3>
+            <h3>투명 배경 확인</h3>
             <p>
               PNG와 WebP는 투명 영역을 유지할 수 있지만, JPEG는 투명도를
               지원하지 않아 변환 시 흰색 배경으로 채워집니다.
             </p>
           </div>
           <div className="card">
-            <h3>브라우저 로컬 처리</h3>
+            <h3>브라우저 안에서 처리</h3>
             <p>
               업로드한 파일과 변환 결과는 현재 브라우저 메모리에만 존재하며,
               다운로드하지 않으면 서버나 클라우드로 전송되지 않습니다.
@@ -90,11 +93,11 @@ export default function ConvertImagePage() {
       </PageSection>
 
       <PageSection
-        title="JPEG, PNG, WebP는 언제 쓰면 좋은가"
+        title="형식별로 이렇게 고르면 편합니다"
         intro={
           <p>
             어떤 형식이 맞는지는 이미지 종류와 배포 목적에 따라 달라집니다.
-            아래 기준을 먼저 읽은 뒤 작업 패널에서 바로 변환해 볼 수 있습니다.
+            아래 기준을 보고 바로 변환해 보세요.
           </p>
         }
       >
@@ -123,13 +126,13 @@ export default function ConvertImagePage() {
         </div>
       </PageSection>
 
-      <PageSection title="현재 범위와 안내">
+      <PageSection title="작업 전에 확인할 점">
         <ul className="chip-list">
           <li>출력 형식은 업로드한 여러 파일에 공통으로 적용되는 JPEG, PNG, WebP 중 하나를 선택합니다.</li>
           <li>원본과 같은 형식을 선택한 파일은 개별 실패로 표시하고 나머지 파일은 계속 처리합니다.</li>
-          <li>변환 결과 파일명에는 `-converted`가 붙고 확장자는 출력 형식에 맞춰 바뀝니다.</li>
+          <li>JPEG로 변환하면 투명 영역이 흰색으로 채워질 수 있습니다.</li>
+          <li>결과 파일명에는 `-converted`가 붙고 확장자는 선택한 형식에 맞춰 바뀝니다.</li>
           <li>브라우저 캔버스를 다시 거치므로 EXIF 같은 메타데이터는 유지되지 않을 수 있습니다.</li>
-          <li>성공한 결과만 ZIP으로 함께 다운로드할 수 있습니다.</li>
         </ul>
       </PageSection>
 
@@ -137,8 +140,8 @@ export default function ConvertImagePage() {
         title="이 도구에서 바로 확인할 수 있는 것"
         intro={
           <p>
-            아래 작업 패널에서 실제 포맷 변환을 실행하고, 실패한 경우 이유를
-            메시지로 확인할 수 있습니다.
+            작업 패널에서 실제 변환을 실행하고, 저장 전에 바뀌는 정보를 바로
+            확인할 수 있습니다.
           </p>
         }
       >
@@ -153,13 +156,13 @@ export default function ConvertImagePage() {
           </div>
           <div className="card">
             <h3>변환 결과 비교</h3>
-            <p>원본과 결과 형식, 파일 크기, 해상도, ZIP 포함 여부를 파일별로 비교합니다.</p>
+            <p>원본과 결과 형식, 파일 크기, 해상도를 파일별로 비교하고 저장 여부를 정할 수 있습니다.</p>
           </div>
           <div className="card">
             <h3>오류 처리</h3>
             <p>
               지원하지 않는 형식과 브라우저 인코딩 실패, 원본과 같은 형식 선택에
-              따른 부분 실패를 모두 사용자 메시지로 안내합니다.
+              따른 부분 실패를 사용자 메시지로 안내합니다.
             </p>
           </div>
         </div>

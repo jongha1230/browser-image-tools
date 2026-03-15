@@ -10,11 +10,11 @@ export const metadata: Metadata = createPageMetadata(getPageMetadataEntry("/guid
 export default function GuidesPage() {
   return (
     <PageLayout breadcrumbs={[{ href: "/", label: "홈" }, { label: "가이드" }]}>
-      <PageHero eyebrow="Guides" title="이미지 작업 전에 읽어두면 좋은 실전 가이드">
+      <PageHero eyebrow="실전 가이드" title="이미지 작업 전에 필요한 판단 기준만 모았습니다">
         <p>
-          압축, 포맷 변환, EXIF 제거, 배치 리사이즈처럼 자주 헷갈리는 주제를
-          짧고 실무적으로 정리했습니다. 각 문서는 실제 도구 라우트와 서로
-          연결돼 있어 읽은 뒤 바로 작업을 이어갈 수 있습니다.
+          압축 세기, 형식 선택, EXIF 정리, 여러 장 리사이즈처럼 헷갈리기 쉬운
+          지점을 짧게 정리했습니다. 각 가이드는 관련 도구와 이어져 있어 읽고
+          바로 작업할 수 있습니다.
         </p>
         <div className="hero__actions">
           <Link className="button-link" href="/tools">
@@ -30,8 +30,8 @@ export default function GuidesPage() {
         title="가이드 목록"
         intro={
           <p>
-            모든 가이드는 서버 렌더링된 HTML 본문을 포함하며, 카드와 본문 링크는
-            모두 일반 링크로 연결됩니다.
+            짧게 읽고 바로 적용할 수 있는 문서만 모았습니다. 예상 읽기 시간도
+            함께 적어 두었습니다.
           </p>
         }
       >
@@ -59,8 +59,8 @@ export default function GuidesPage() {
         title="가이드에서 바로 이어지는 도구"
         intro={
           <p>
-            글을 먼저 읽고 바로 실행해 볼 수 있도록 각 가이드는 아래 도구와
-            연결됩니다.
+            읽고 끝나는 문서가 아니라, 바로 실행해 볼 수 있도록 관련 도구를 함께
+            연결했습니다.
           </p>
         }
       >

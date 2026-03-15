@@ -15,7 +15,7 @@ export function SiteFooter() {
         <div className="site-footer__summary">
           <strong>{siteName}</strong>
           <p>{siteTagline}</p>
-          <p>모든 이미지 처리는 브라우저 안에서만 이뤄지는 것을 전제로 설계합니다.</p>
+          <p>이미지는 서버로 올리지 않고 현재 브라우저 안에서만 처리합니다.</p>
         </div>
 
         <nav aria-label="보조 탐색">
