@@ -9,16 +9,18 @@ async function loadSiteModules(env: Record<string, string | undefined>) {
     ...env,
   };
 
-  const [siteConfig, siteMetadata, robotsModule, sitemapModule, rssModule] =
+  const [siteConfig, siteMetadata, robotsModule, sitemapModule, rssModule, proxyModule] =
     await Promise.all([
       import("../lib/site-config"),
       import("../lib/site-metadata"),
       import("../app/robots"),
       import("../app/sitemap"),
       import("../app/rss.xml/route"),
+      import("../proxy"),
     ]);
 
   return {
+    proxy: proxyModule.proxy,
     robots: robotsModule.default,
     rss: rssModule.GET,
     siteConfig,
@@ -75,7 +77,7 @@ describe("site configuration", () => {
   });
 
   it("falls back to a safe noindex mode when no canonical site origin is configured", async () => {
-    const { robots, rss, siteConfig, siteMetadata, sitemap } =
+    const { proxy, robots, rss, siteConfig, siteMetadata, sitemap } =
       await loadSiteModules({
         NEXT_PUBLIC_SITE_URL: "",
         SITE_URL: "",
@@ -103,6 +105,15 @@ describe("site configuration", () => {
     });
     expect(sitemap()).toEqual([]);
 
+    const proxyResponse = proxy({
+      url: "https://browser-image-tools.vercel.app/tools",
+      headers: new Headers({
+        host: "browser-image-tools.vercel.app",
+      }),
+    } as never);
+
+    expect(proxyResponse.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+
     const rssResponse = await rss();
 
     expect(rssResponse.status).toBe(404);
@@ -110,7 +121,7 @@ describe("site configuration", () => {
   });
 
   it("keeps the default vercel hostname out of the index until a custom domain is configured", async () => {
-    const { robots, siteConfig, siteMetadata } = await loadSiteModules({
+    const { proxy, robots, siteConfig, siteMetadata } = await loadSiteModules({
       NEXT_PUBLIC_SITE_URL: "https://browser-image-tools.vercel.app",
       SITE_URL: undefined,
     });
@@ -134,10 +145,19 @@ describe("site configuration", () => {
         },
       ],
     });
+
+    const proxyResponse = proxy({
+      url: "https://browser-image-tools.vercel.app/tools/remove-exif",
+      headers: new Headers({
+        host: "browser-image-tools.vercel.app",
+      }),
+    } as never);
+
+    expect(proxyResponse.headers.get("x-robots-tag")).toBe("noindex, nofollow");
   });
 
   it("builds production-only canonical redirects once a custom domain is configured", async () => {
-    const { siteConfig } = await loadSiteModules({
+    const { proxy, siteConfig } = await loadSiteModules({
       NEXT_PUBLIC_SITE_URL: "",
       SITE_URL: "https://images.example.com",
     });
@@ -159,5 +179,14 @@ describe("site configuration", () => {
       requestHost: "images.example.com",
       deploymentEnvironment: "production",
     })).toBeNull();
+
+    const proxyResponse = proxy({
+      url: "https://images.example.com/tools",
+      headers: new Headers({
+        host: "images.example.com",
+      }),
+    } as never);
+
+    expect(proxyResponse.headers.get("x-robots-tag")).toBeNull();
   });
 });
