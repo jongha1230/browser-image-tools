@@ -4,10 +4,12 @@ import Image from "next/image";
 import {
   useEffect,
   useEffectEvent,
+  useId,
   useRef,
   useState,
   type ChangeEvent,
   type DragEvent,
+  type KeyboardEvent,
 } from "react";
 
 import { useImageUploads } from "@/components/image-upload-provider";
@@ -273,6 +275,7 @@ export function ToolShell({
   primaryActionLabel,
   variant = "default",
 }: ToolShellProps) {
+  const shellId = useId();
   const [activeStep, setActiveStep] = useState<StepKey>("upload");
   const [isDragging, setIsDragging] = useState(false);
   const [outputFormat, setOutputFormat] =
@@ -311,6 +314,17 @@ export function ToolShell({
     lastSource,
     removeItem,
   } = useImageUploads();
+  const titleId = `${shellId}-title`;
+  const descriptionId = `${shellId}-description`;
+  const dropzoneTitleId = `${shellId}-dropzone-title`;
+  const dropzoneHintId = `${shellId}-dropzone-hint`;
+  const uploadMessagesId = `${shellId}-upload-messages`;
+  const processingErrorId = `${shellId}-processing-error`;
+  const processingNoteId = `${shellId}-processing-note`;
+  const progressLabelId = `${shellId}-progress-label`;
+  const progressHintId = `${shellId}-progress-hint`;
+  const resizeValidationId = `${shellId}-resize-validation`;
+  const stepStatusId = `${shellId}-step-status`;
   const isCompressTool = variant === "compress";
   const isResizeTool = variant === "resize";
   const isConvertTool = variant === "convert";
@@ -404,6 +418,18 @@ export function ToolShell({
     (!isResizeTool || Boolean(resizeValidation?.ok));
   const canDownloadZip =
     toolVariant !== null && successCount > 0 && !isProcessing && !isPreparingZip;
+  const dropzoneDescriptionIds =
+    [
+      dropzoneHintId,
+      errors.length > 0 ? uploadMessagesId : null,
+      processingError ? processingErrorId : null,
+    ]
+      .filter((value): value is string => Boolean(value))
+      .join(" ") || undefined;
+  const progressValueText =
+    items.length > 0
+      ? `${completedCount}개 완료, ${successCount}개 성공, ${errorCount}개 실패`
+      : "실행 대기";
 
   let previewPlan: ReturnType<typeof resolveImageProcessingPlan> | null = null;
 
@@ -545,6 +571,17 @@ export function ToolShell({
     }
 
     inputRef.current?.click();
+  }
+
+  function handleDropzoneKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.target !== event.currentTarget || isProcessing) {
+      return;
+    }
+
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openFilePicker();
+    }
   }
 
   function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
@@ -930,7 +967,9 @@ export function ToolShell({
           ? `${items.length}개 파일을 ${formatDimensions(resizeTargetDimensions)} 기준으로 저장합니다. 비율 잠금은 ${
               keepAspectRatio ? "켜짐" : "꺼짐"
             } 상태입니다.`
-          : "먼저 리사이즈할 이미지를 추가하면 배치 가로·세로 값과 비율 잠금 옵션을 선택할 수 있습니다.",
+          : items.length > 0 && resizeValidationMessage
+            ? `${resizeValidationMessage} 입력을 수정하면 배치 가로·세로 값과 비율 잠금 옵션을 바로 적용할 수 있습니다.`
+            : "먼저 리사이즈할 이미지를 추가하면 배치 가로·세로 값과 비율 잠금 옵션을 선택할 수 있습니다.",
       export:
         hasResults
           ? `총 ${items.length}개 중 ${successCount}개 성공, ${errorCount}개 실패입니다. 성공한 결과만 개별 다운로드와 ZIP 내보내기에 포함됩니다.`
@@ -988,29 +1027,36 @@ export function ToolShell({
   return (
     <section
       aria-busy={isProcessing || isPreparingZip}
-      aria-labelledby="tool-shell-title"
+      aria-describedby={descriptionId}
+      aria-labelledby={titleId}
       className="tool-shell"
     >
       <div className="tool-shell__header">
         <div>
-          <h2 id="tool-shell-title">{title} 작업 패널</h2>
-          <p>{description}</p>
+          <h2 id={titleId}>{title} 작업 패널</h2>
+          <p id={descriptionId}>{description}</p>
         </div>
         <span className="tool-shell__badge">{getVariantLabel(variant)}</span>
       </div>
 
       <div className="tool-shell__workspace">
         <div
+          aria-describedby={dropzoneDescriptionIds}
+          aria-labelledby={dropzoneTitleId}
           className="tool-shell__dropzone"
           data-dragging={isDragging}
+          onKeyDown={handleDropzoneKeyDown}
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
+          role="group"
+          tabIndex={isProcessing ? -1 : 0}
         >
           <input
             ref={inputRef}
             accept={supportedImageAccept}
+            aria-describedby={dropzoneDescriptionIds}
             aria-label="이미지 파일 선택"
             className="visually-hidden"
             disabled={isProcessing}
@@ -1018,10 +1064,14 @@ export function ToolShell({
             onChange={handleInputChange}
             type="file"
           />
-          <strong>이미지를 끌어 놓거나 파일 선택으로 여러 개 추가하세요</strong>
-          <p>
+          <strong id={dropzoneTitleId}>
+            이미지를 끌어 놓거나 파일 선택으로 여러 개 추가하세요
+          </strong>
+          <p id={dropzoneHintId}>
             지원 형식은 {supportedImageTypesText}입니다. 붙여넣기 이미지는 이
-            페이지에서 <kbd>Ctrl</kbd> + <kbd>V</kbd> 로 바로 추가할 수 있습니다.
+            페이지에서 <kbd>Ctrl</kbd> + <kbd>V</kbd> 로 바로 추가할 수 있고,
+            드롭 영역에 포커스한 뒤 <kbd>Enter</kbd> 또는 <kbd>Space</kbd> 로도
+            파일 선택 창을 열 수 있습니다.
           </p>
           <div className="tool-shell__drop-actions">
             <button className="button-link" onClick={openFilePicker} type="button">
@@ -1033,7 +1083,7 @@ export function ToolShell({
               onClick={clearItems}
               type="button"
             >
-              업로드 초기화
+              업로드 목록 비우기
             </button>
           </div>
           <ul className="chip-list">
@@ -1044,11 +1094,17 @@ export function ToolShell({
         </div>
 
         {errors.length > 0 ? (
-          <div className="tool-shell__message" role="alert">
+          <div
+            aria-atomic="true"
+            aria-live="assertive"
+            className="tool-shell__message"
+            id={uploadMessagesId}
+            role="alert"
+          >
             <div className="tool-shell__message-header">
               <strong>확인할 업로드 메시지</strong>
               <button className="button-muted" onClick={clearErrors} type="button">
-                메시지 지우기
+                업로드 메시지 지우기
               </button>
             </div>
             <ul className="list-reset tool-shell__message-list">
@@ -1060,14 +1116,25 @@ export function ToolShell({
         ) : null}
 
         {processingError ? (
-          <div className="tool-shell__message" role="alert">
+          <div
+            aria-atomic="true"
+            aria-live="assertive"
+            className="tool-shell__message"
+            id={processingErrorId}
+            role="alert"
+          >
             <strong>처리를 진행할 수 없습니다</strong>
             <p>{processingError}</p>
           </div>
         ) : null}
 
         {processingNote ? (
-          <div className="tool-shell__message">
+          <div
+            aria-live="polite"
+            className="tool-shell__message"
+            id={processingNoteId}
+            role="status"
+          >
             <strong>처리 엔진 안내</strong>
             <p>{processingNote}</p>
           </div>
@@ -1103,17 +1170,26 @@ export function ToolShell({
         {toolVariant ? (
           <div className="tool-shell__progress">
             <div className="tool-shell__progress-header">
-              <strong>배치 진행률</strong>
+              <strong id={progressLabelId}>배치 진행률</strong>
               <span>
                 {items.length > 0
                   ? `${completedCount}/${items.length} 완료`
                   : "실행 대기"}
               </span>
             </div>
-            <div aria-hidden="true" className="tool-shell__progress-bar">
+            <div
+              aria-describedby={progressHintId}
+              aria-labelledby={progressLabelId}
+              aria-valuemax={Math.max(items.length, 1)}
+              aria-valuemin={0}
+              aria-valuenow={items.length > 0 ? completedCount : 0}
+              aria-valuetext={progressValueText}
+              className="tool-shell__progress-bar"
+              role="progressbar"
+            >
               <span style={{ width: `${progressPercent}%` }} />
             </div>
-            <p className="tool-shell__helper">
+            <p className="tool-shell__helper" id={progressHintId}>
               {processingCount > 0
                 ? `${processingCount}개 파일을 현재 처리 중입니다. 성공한 파일만 ZIP에 묶어 다운로드할 수 있습니다.`
                 : hasResults
@@ -1357,6 +1433,10 @@ export function ToolShell({
                 <label className="tool-shell__field" htmlFor="resize-width">
                   <span>가로 (px)</span>
                   <input
+                    aria-describedby={
+                      resizeValidationMessage ? resizeValidationId : undefined
+                    }
+                    aria-invalid={resizeValidationMessage ? true : undefined}
                     className="tool-shell__input"
                     disabled={isProcessing}
                     id="resize-width"
@@ -1371,6 +1451,10 @@ export function ToolShell({
                 <label className="tool-shell__field" htmlFor="resize-height">
                   <span>세로 (px)</span>
                   <input
+                    aria-describedby={
+                      resizeValidationMessage ? resizeValidationId : undefined
+                    }
+                    aria-invalid={resizeValidationMessage ? true : undefined}
                     className="tool-shell__input"
                     disabled={isProcessing}
                     id="resize-height"
@@ -1431,7 +1515,10 @@ export function ToolShell({
               </p>
 
               {resizeValidationMessage ? (
-                <p className="tool-shell__helper tool-shell__helper--error">
+                <p
+                  className="tool-shell__helper tool-shell__helper--error"
+                  id={resizeValidationId}
+                >
                   {resizeValidationMessage}
                 </p>
               ) : null}
@@ -1634,6 +1721,8 @@ export function ToolShell({
 
           return (
             <button
+              aria-controls={stepStatusId}
+              aria-pressed={activeStep === stepKey}
               key={stepKey}
               className="tool-shell__step"
               data-active={activeStep === stepKey}
@@ -1646,7 +1735,13 @@ export function ToolShell({
         })}
       </div>
 
-      <div className="tool-shell__status" role="status" aria-live="polite">
+      <div
+        aria-atomic="true"
+        aria-live="polite"
+        className="tool-shell__status"
+        id={stepStatusId}
+        role="status"
+      >
         <strong>{stepLabels[activeStep]}</strong>
         <p>{statusByStep[activeStep]}</p>
       </div>

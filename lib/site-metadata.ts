@@ -132,6 +132,10 @@ export const rootMetadata: Metadata = {
   applicationName: siteName,
   category: "technology",
   keywords: [...defaultKeywords],
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    shortcut: ["/icon.svg"],
+  },
   alternates: {
     canonical: "/",
   },

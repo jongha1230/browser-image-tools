@@ -21,7 +21,7 @@ export default function ToolsPage() {
       </PageHero>
 
       <PageSection
-        title="현재 스캐폴드된 도구"
+        title="현재 제공 중인 도구"
         intro={<p>도구 인덱스는 표준 링크만 사용해 검색 엔진과 사용자 모두가 바로 이동할 수 있게 유지합니다.</p>}
       >
         <div className="card-grid">
@@ -37,8 +37,9 @@ export default function ToolsPage() {
         </div>
       </PageSection>
 
-      <PageSection title="다음으로 붙일 기능">
+      <PageSection title="운영 준비와 다음 단계">
         <ul className="list-reset">
+          <li>배포 전 체크리스트와 검색 등록 절차를 기준으로 운영 점검 이어가기</li>
           <li>도구별 옵션 프리셋 세분화와 저장 규칙 보강</li>
           <li>광고 슬롯 배치와 성능 측정</li>
           <li>대용량 파일 대응을 위한 추가 워커 최적화</li>
