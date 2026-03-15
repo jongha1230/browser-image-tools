@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createUploadFileId,
   formatFileSize,
+  getSupportedImageMimeType,
   isSupportedImageFile,
   validateImageFiles,
 } from "../lib/image-upload";
@@ -44,6 +45,14 @@ describe("image upload helpers", () => {
         lastModified: 4,
       }),
     ).toBe(true);
+    expect(
+      getSupportedImageMimeType({
+        name: "clipboard-image.webp",
+        size: 640,
+        type: "",
+        lastModified: 4,
+      }),
+    ).toBe("image/webp");
   });
 
   it("rejects unsupported formats and duplicates with clear buckets", () => {

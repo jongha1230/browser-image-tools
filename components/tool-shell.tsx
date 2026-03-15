@@ -12,12 +12,36 @@ import {
 
 import { useImageUploads } from "@/components/image-upload-provider";
 import {
+  compressionOutputOptions,
+  createCompressedFileName,
+  getCompressionDeltaPercent,
+  getCompressionMimeTypeLabel,
+  isQualityAdjustableFormat,
+  resolveCompressionMimeType,
+  type CompressionOutputFormat,
+} from "@/lib/compress-image";
+import {
   formatFileSize,
+  getSupportedImageMimeType,
   supportedImageAccept,
   supportedImageTypesText,
+  type SupportedImageMimeType,
 } from "@/lib/image-upload";
 
 type StepKey = "upload" | "options" | "export";
+type ToolShellVariant = "default" | "compress";
+
+type CompressionResult = {
+  blob: Blob;
+  fileName: string;
+  mimeType: SupportedImageMimeType;
+  outputFormat: CompressionOutputFormat;
+  previewUrl: string;
+  quality: number;
+  sourceId: string;
+  width: number;
+  height: number;
+};
 
 const stepLabels: Record<StepKey, string> = {
   upload: "파일 준비",
@@ -35,6 +59,7 @@ type ToolShellProps = {
   title: string;
   description: string;
   primaryActionLabel: string;
+  variant?: ToolShellVariant;
 };
 
 function getClipboardFiles(dataTransfer: DataTransfer | null) {
@@ -54,34 +79,156 @@ function getClipboardFiles(dataTransfer: DataTransfer | null) {
     .filter((file): file is File => file !== null);
 }
 
+function loadImageElement(sourceUrl: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new window.Image();
+
+    image.onload = () => resolve(image);
+    image.onerror = () =>
+      reject(
+        new Error(
+          "선택한 이미지를 읽지 못했습니다. 다른 파일로 다시 시도해 주세요.",
+        ),
+      );
+    image.src = sourceUrl;
+  });
+}
+
+function canvasToBlob(
+  canvas: HTMLCanvasElement,
+  mimeType: SupportedImageMimeType,
+  quality?: number,
+) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(
+            new Error(
+              "브라우저가 압축 결과를 만들지 못했습니다. 형식을 바꿔 다시 시도해 주세요.",
+            ),
+          );
+          return;
+        }
+
+        resolve(blob);
+      },
+      mimeType,
+      quality,
+    );
+  });
+}
+
+function downloadBlobUrl(blobUrl: string, fileName: string) {
+  const link = document.createElement("a");
+
+  link.href = blobUrl;
+  link.download = fileName;
+  link.rel = "noopener";
+  link.click();
+}
+
+function formatCompressionSummary(originalBytes: number, outputBytes: number) {
+  const deltaPercent = getCompressionDeltaPercent(originalBytes, outputBytes);
+  const savedBytes = originalBytes - outputBytes;
+
+  if (savedBytes > 0) {
+    return `${formatFileSize(savedBytes)} 감소 (${deltaPercent.toFixed(1)}%)`;
+  }
+
+  if (savedBytes < 0) {
+    return `${formatFileSize(Math.abs(savedBytes))} 증가 (${Math.abs(
+      deltaPercent,
+    ).toFixed(1)}%)`;
+  }
+
+  return "용량 변화 없음";
+}
+
 export function ToolShell({
   title,
   description,
   primaryActionLabel,
+  variant = "default",
 }: ToolShellProps) {
   const [activeStep, setActiveStep] = useState<StepKey>("upload");
   const [isDragging, setIsDragging] = useState(false);
+  const [outputFormat, setOutputFormat] =
+    useState<CompressionOutputFormat>("original");
+  const [quality, setQuality] = useState(82);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingError, setProcessingError] = useState<string | null>(null);
+  const [sourceDimensions, setSourceDimensions] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [compressionResult, setCompressionResult] =
+    useState<CompressionResult | null>(null);
   const dragDepthRef = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { addFiles, clearErrors, clearItems, errors, items, lastSource, removeItem } =
-    useImageUploads();
+  const {
+    addFiles,
+    clearErrors,
+    clearItems,
+    errors,
+    items,
+    lastSource,
+    removeItem,
+  } = useImageUploads();
+  const isCompressTool = variant === "compress";
+  const selectedItem = items[0] ?? null;
+  const selectedItemId = selectedItem?.id ?? null;
+  const selectedMimeType = selectedItem
+    ? getSupportedImageMimeType(selectedItem.file)
+    : null;
+  const selectedPreviewUrl = selectedItem?.previewUrl ?? null;
+  const targetMimeType = selectedItem
+    ? resolveCompressionMimeType(selectedItem.file, outputFormat)
+    : null;
   const totalSize = items.reduce((sum, item) => sum + item.file.size, 0);
-  const fileCountLabel = items.length > 0 ? `${items.length}개 파일 준비됨` : "아직 업로드된 파일이 없음";
+  const fileCountLabel =
+    items.length > 0 ? `${items.length}개 파일 준비됨` : "아직 업로드된 파일이 없음";
+  const hasTooManyFiles = isCompressTool && items.length > 1;
+  const isQualityEnabled = targetMimeType
+    ? isQualityAdjustableFormat(targetMimeType)
+    : true;
+  const isResultStale = compressionResult
+    ? compressionResult.sourceId !== selectedItem?.id ||
+      compressionResult.outputFormat !== outputFormat ||
+      compressionResult.quality !== quality
+    : false;
 
-  const statusByStep: Record<StepKey, string> = {
-    upload:
-      items.length > 0
-        ? `${fileCountLabel}. 선택한 이미지는 현재 브라우저 탭 안에서만 유지되며, 이후 도구 페이지에서도 같은 업로드 상태를 재사용할 수 있습니다.`
-        : `JPEG, PNG, WebP 이미지를 업로드하면 이 단계에서 바로 미리보기와 오류 상태를 확인할 수 있습니다.`,
-    options:
-      items.length > 0
-        ? `${items.length}개 파일이 준비되어 있어 다음 단계에서는 도구별 옵션 UI만 추가하면 됩니다.`
-        : "먼저 파일을 올리면 압축 품질, 크기, 출력 포맷, 메타데이터 제거 여부 같은 옵션 패널을 이 단계에 연결할 수 있습니다.",
-    export:
-      items.length > 0
-        ? `현재 업로드 상태와 미리보기가 준비되어 있어 이후 단계에서 결과 비교, 개별 다운로드, 배치 내보내기를 붙일 수 있습니다.`
-        : "업로드가 준비되면 처리 결과 미리보기와 개별 다운로드, 배치 내보내기 흐름이 이 단계에 이어집니다.",
-  };
+  const statusByStep: Record<StepKey, string> = isCompressTool
+    ? {
+        upload: hasTooManyFiles
+          ? "이미지 압축은 현재 한 번에 1개 파일만 지원합니다. 미리보기 카드에서 하나만 남기면 압축을 계속할 수 있습니다."
+          : selectedItem
+            ? `${selectedItem.file.name} 파일이 준비되었습니다. 이 파일은 브라우저 탭 안에서만 유지되며 서버로 전송되지 않습니다.`
+            : `JPEG, PNG, WebP 이미지 1개를 추가하면 이 페이지에서 바로 용량 비교와 다운로드까지 진행할 수 있습니다.`,
+        options: selectedItem && targetMimeType
+          ? `${getCompressionMimeTypeLabel(targetMimeType)} 형식으로 저장되며, 품질은 ${
+              isQualityEnabled ? `${quality}%` : "무손실 재저장"
+            } 기준으로 적용됩니다.`
+          : "먼저 압축할 이미지를 1개만 준비하면 품질과 출력 형식을 선택할 수 있습니다.",
+        export:
+          compressionResult && !isResultStale
+            ? `${compressionResult.fileName} 파일이 준비되었습니다. 원본과 결과 크기를 확인한 뒤 바로 다운로드할 수 있습니다.`
+            : "압축을 실행하면 결과 파일 크기, 출력 형식, 저장용 파일명을 이 단계에서 확인할 수 있습니다.",
+      }
+    : {
+        upload:
+          items.length > 0
+            ? `${fileCountLabel}. 선택한 이미지는 현재 브라우저 탭 안에서만 유지되며, 이후 도구 페이지에서도 같은 업로드 상태를 재사용할 수 있습니다.`
+            : `JPEG, PNG, WebP 이미지를 업로드하면 이 단계에서 바로 미리보기와 오류 상태를 확인할 수 있습니다.`,
+        options:
+          items.length > 0
+            ? `${items.length}개 파일이 준비되어 있어 다음 단계에서는 도구별 옵션 UI만 추가하면 됩니다.`
+            : "먼저 파일을 올리면 압축 품질, 크기, 출력 포맷, 메타데이터 제거 여부 같은 옵션 패널을 이 단계에 연결할 수 있습니다.",
+        export:
+          items.length > 0
+            ? `현재 업로드 상태와 미리보기가 준비되어 있어 이후 단계에서 결과 비교, 개별 다운로드, 배치 내보내기를 붙일 수 있습니다.`
+            : "업로드가 준비되면 처리 결과 미리보기와 개별 다운로드, 배치 내보내기 흐름이 이 단계에 이어집니다.",
+      };
 
   const handleWindowPaste = useEffectEvent((event: ClipboardEvent) => {
     const target = event.target;
@@ -108,6 +255,78 @@ export function ToolShell({
       window.removeEventListener("paste", onPaste);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isCompressTool) {
+      return;
+    }
+
+    if (!selectedPreviewUrl) {
+      setSourceDimensions(null);
+      setCompressionResult(null);
+      setProcessingError(null);
+      setActiveStep("upload");
+      return;
+    }
+
+    setCompressionResult(null);
+    setProcessingError(null);
+    setSourceDimensions(null);
+
+    let isCancelled = false;
+
+    loadImageElement(selectedPreviewUrl)
+      .then((image) => {
+        if (isCancelled) {
+          return;
+        }
+
+        setSourceDimensions({
+          width: image.naturalWidth,
+          height: image.naturalHeight,
+        });
+      })
+      .catch((error: unknown) => {
+        if (isCancelled) {
+          return;
+        }
+
+        setProcessingError(
+          error instanceof Error
+            ? error.message
+            : "선택한 이미지 정보를 읽지 못했습니다. 다시 시도해 주세요.",
+        );
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isCompressTool, selectedItemId, selectedPreviewUrl]);
+
+  useEffect(() => {
+    if (!isCompressTool) {
+      return;
+    }
+
+    if (!selectedItem) {
+      return;
+    }
+
+    if (compressionResult && !isResultStale) {
+      setActiveStep("export");
+      return;
+    }
+
+    setActiveStep("options");
+  }, [compressionResult, isCompressTool, isResultStale, selectedItem]);
+
+  useEffect(() => {
+    return () => {
+      if (compressionResult) {
+        URL.revokeObjectURL(compressionResult.previewUrl);
+      }
+    };
+  }, [compressionResult]);
 
   function openFilePicker() {
     inputRef.current?.click();
@@ -148,6 +367,104 @@ export function ToolShell({
     addFiles(event.dataTransfer.files, "drop");
   }
 
+  async function handleCompress() {
+    if (!selectedItem) {
+      setProcessingError("먼저 압축할 이미지를 추가해 주세요.");
+      setActiveStep("upload");
+      return;
+    }
+
+    if (hasTooManyFiles) {
+      setProcessingError(
+        "이미지 압축은 현재 한 번에 1개 파일만 지원합니다. 미리보기에서 하나만 남긴 뒤 다시 시도해 주세요.",
+      );
+      setActiveStep("upload");
+      return;
+    }
+
+    if (!targetMimeType) {
+      setProcessingError(
+        "이 파일 형식은 현재 압축 출력 대상으로 사용할 수 없습니다.",
+      );
+      return;
+    }
+
+    setIsProcessing(true);
+    setProcessingError(null);
+
+    try {
+      const image = await loadImageElement(selectedItem.previewUrl);
+      const canvas = document.createElement("canvas");
+
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        throw new Error(
+          "브라우저에서 이미지 캔버스를 준비하지 못했습니다. 다른 브라우저에서 다시 시도해 주세요.",
+        );
+      }
+
+      if (targetMimeType === "image/jpeg") {
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+      const blob = await canvasToBlob(
+        canvas,
+        targetMimeType,
+        isQualityAdjustableFormat(targetMimeType) ? quality / 100 : undefined,
+      );
+      const actualMimeType = getSupportedImageMimeType({
+        name: createCompressedFileName(selectedItem.file.name, targetMimeType),
+        size: blob.size,
+        type: blob.type,
+        lastModified: Date.now(),
+      });
+
+      if (!actualMimeType || actualMimeType !== targetMimeType) {
+        throw new Error(
+          targetMimeType === "image/webp"
+            ? "현재 브라우저에서는 WebP 내보내기를 지원하지 않습니다. JPEG 또는 원본 형식으로 다시 시도해 주세요."
+            : "선택한 출력 형식으로 파일을 저장하지 못했습니다. 다른 형식으로 다시 시도해 주세요.",
+        );
+      }
+
+      setCompressionResult({
+        blob,
+        fileName: createCompressedFileName(selectedItem.file.name, actualMimeType),
+        mimeType: actualMimeType,
+        outputFormat,
+        previewUrl: URL.createObjectURL(blob),
+        quality,
+        sourceId: selectedItem.id,
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      });
+      setActiveStep("export");
+    } catch (error: unknown) {
+      setProcessingError(
+        error instanceof Error
+          ? error.message
+          : "이미지 압축 중 오류가 발생했습니다. 다시 시도해 주세요.",
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
+  function handleDownload() {
+    if (!compressionResult) {
+      return;
+    }
+
+    downloadBlobUrl(compressionResult.previewUrl, compressionResult.fileName);
+  }
+
   return (
     <section className="tool-shell" aria-labelledby="tool-shell-title">
       <div className="tool-shell__header">
@@ -155,7 +472,9 @@ export function ToolShell({
           <h2 id="tool-shell-title">{title} 작업 패널</h2>
           <p>{description}</p>
         </div>
-        <span className="tool-shell__badge">브라우저 로컬 업로드 활성화</span>
+        <span className="tool-shell__badge">
+          {isCompressTool ? "브라우저 로컬 압축 활성화" : "브라우저 로컬 업로드 활성화"}
+        </span>
       </div>
 
       <div className="tool-shell__workspace">
@@ -172,7 +491,7 @@ export function ToolShell({
             accept={supportedImageAccept}
             aria-label="이미지 파일 선택"
             className="visually-hidden"
-            multiple
+            multiple={!isCompressTool}
             onChange={handleInputChange}
             type="file"
           />
@@ -196,9 +515,13 @@ export function ToolShell({
             </button>
           </div>
           <ul className="chip-list">
-            <li>브라우저 안에서만 파일 보관 및 미리보기</li>
+            <li>브라우저 안에서만 파일 보관 및 처리</li>
             <li>JPEG, PNG, WebP 파일만 허용</li>
-            <li>이후 도구 페이지에서도 같은 업로드 상태 재사용 가능</li>
+            <li>
+              {isCompressTool
+                ? "현재 압축 도구는 단일 파일 작업만 지원"
+                : "이후 도구 페이지에서도 같은 업로드 상태 재사용 가능"}
+            </li>
           </ul>
         </div>
 
@@ -215,6 +538,23 @@ export function ToolShell({
                 <li key={error.id}>{error.message}</li>
               ))}
             </ul>
+          </div>
+        ) : null}
+
+        {processingError ? (
+          <div className="tool-shell__message" role="alert">
+            <strong>압축을 진행할 수 없습니다</strong>
+            <p>{processingError}</p>
+          </div>
+        ) : null}
+
+        {hasTooManyFiles ? (
+          <div className="tool-shell__message" role="alert">
+            <strong>단일 파일만 남겨 주세요</strong>
+            <p>
+              이 도구는 현재 한 번에 1개 이미지만 압축합니다. 아래 카드에서
+              나머지 파일을 제거하면 바로 계속할 수 있습니다.
+            </p>
           </div>
         ) : null}
 
@@ -272,6 +612,168 @@ export function ToolShell({
             </p>
           </div>
         )}
+
+        {isCompressTool && selectedItem ? (
+          <div className="detail-grid tool-shell__comparison-grid">
+            <section className="card tool-shell__option-card">
+              <h3>압축 옵션</h3>
+
+              <label className="tool-shell__field" htmlFor="compress-output-format">
+                <span>출력 형식</span>
+                <select
+                  className="tool-shell__select"
+                  id="compress-output-format"
+                  onChange={(event) =>
+                    setOutputFormat(event.currentTarget.value as CompressionOutputFormat)
+                  }
+                  value={outputFormat}
+                >
+                  {compressionOutputOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.value === "original" && selectedMimeType
+                        ? `${option.label} (${getCompressionMimeTypeLabel(
+                            selectedMimeType,
+                          )})`
+                        : option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <p className="tool-shell__helper">
+                {compressionOutputOptions.find((option) => option.value === outputFormat)
+                  ?.description ?? "출력 형식을 선택해 압축 결과를 저장합니다."}
+              </p>
+
+              <label className="tool-shell__field" htmlFor="compress-quality">
+                <span>품질</span>
+                <div className="tool-shell__range-row">
+                  <input
+                    id="compress-quality"
+                    max="100"
+                    min="40"
+                    onChange={(event) => setQuality(Number(event.currentTarget.value))}
+                    step="1"
+                    type="range"
+                    value={quality}
+                    disabled={!isQualityEnabled}
+                  />
+                  <strong>{isQualityEnabled ? `${quality}%` : "무손실"}</strong>
+                </div>
+              </label>
+
+              <p className="tool-shell__helper">
+                {isQualityEnabled
+                  ? "값이 낮을수록 파일은 더 작아질 수 있지만, 세부 묘사가 줄어들 수 있습니다."
+                  : "PNG로 저장하면 품질 슬라이더 대신 원본 해상도 그대로 무손실 재저장이 적용됩니다."}
+              </p>
+            </section>
+
+            <section className="card">
+              <h3>원본 정보</h3>
+              <dl className="tool-shell__stat-list">
+                <div>
+                  <dt>파일명</dt>
+                  <dd>{selectedItem.file.name}</dd>
+                </div>
+                <div>
+                  <dt>원본 형식</dt>
+                  <dd>
+                    {selectedMimeType
+                      ? getCompressionMimeTypeLabel(selectedMimeType)
+                      : "확인 불가"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>파일 크기</dt>
+                  <dd>{formatFileSize(selectedItem.file.size)}</dd>
+                </div>
+                <div>
+                  <dt>해상도</dt>
+                  <dd>
+                    {sourceDimensions
+                      ? `${sourceDimensions.width} x ${sourceDimensions.height}`
+                      : "읽는 중"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>저장 이름</dt>
+                  <dd>
+                    {targetMimeType
+                      ? createCompressedFileName(selectedItem.file.name, targetMimeType)
+                      : "형식 확인 필요"}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          </div>
+        ) : null}
+
+        {isCompressTool && compressionResult && selectedItem ? (
+          <div className="detail-grid tool-shell__comparison-grid">
+            <article className="card tool-shell__preview-card">
+              <div className="tool-shell__preview-media">
+                <Image
+                  alt={`${compressionResult.fileName} 미리보기`}
+                  fill
+                  sizes="(min-width: 900px) 30vw, (min-width: 640px) 45vw, 100vw"
+                  src={compressionResult.previewUrl}
+                  unoptimized
+                />
+              </div>
+              <div className="tool-shell__preview-meta">
+                <h3>{compressionResult.fileName}</h3>
+                <p>{getCompressionMimeTypeLabel(compressionResult.mimeType)}</p>
+                <p>{formatFileSize(compressionResult.blob.size)}</p>
+              </div>
+            </article>
+
+            <section className="card">
+              <h3>압축 결과</h3>
+              <dl className="tool-shell__stat-list">
+                <div>
+                  <dt>압축 전</dt>
+                  <dd>{formatFileSize(selectedItem.file.size)}</dd>
+                </div>
+                <div>
+                  <dt>압축 후</dt>
+                  <dd>{formatFileSize(compressionResult.blob.size)}</dd>
+                </div>
+                <div>
+                  <dt>용량 변화</dt>
+                  <dd>
+                    {formatCompressionSummary(
+                      selectedItem.file.size,
+                      compressionResult.blob.size,
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt>출력 형식</dt>
+                  <dd>{getCompressionMimeTypeLabel(compressionResult.mimeType)}</dd>
+                </div>
+                <div>
+                  <dt>해상도</dt>
+                  <dd>
+                    {compressionResult.width} x {compressionResult.height}
+                  </dd>
+                </div>
+              </dl>
+
+              {isResultStale ? (
+                <p className="tool-shell__helper">
+                  옵션이 변경되어 현재 결과는 이전 설정 기준입니다. 최신 설정으로
+                  덮어쓰려면 다시 압축해 주세요.
+                </p>
+              ) : (
+                <p className="tool-shell__helper">
+                  결과 파일은 현재 브라우저 메모리에만 존재하며, 다운로드하지 않으면
+                  서버로 전송되지 않습니다.
+                </p>
+              )}
+            </section>
+          </div>
+        ) : null}
       </div>
 
       <div className="tool-shell__step-list" aria-label="작업 흐름">
@@ -298,12 +800,35 @@ export function ToolShell({
       </div>
 
       <div className="tool-shell__actions">
-        <button className="button-link" type="button" disabled>
-          {primaryActionLabel}
-        </button>
-        <button className="button-muted" type="button" disabled>
-          배치 내보내기 연결 예정
-        </button>
+        {isCompressTool ? (
+          <>
+            <button
+              className="button-link"
+              type="button"
+              disabled={!selectedItem || hasTooManyFiles || isProcessing}
+              onClick={handleCompress}
+            >
+              {isProcessing ? "압축 중..." : primaryActionLabel}
+            </button>
+            <button
+              className="button-muted"
+              type="button"
+              disabled={!compressionResult}
+              onClick={handleDownload}
+            >
+              결과 다운로드
+            </button>
+          </>
+        ) : (
+          <>
+            <button className="button-link" type="button" disabled>
+              {primaryActionLabel}
+            </button>
+            <button className="button-muted" type="button" disabled>
+              배치 내보내기 연결 예정
+            </button>
+          </>
+        )}
       </div>
     </section>
   );
