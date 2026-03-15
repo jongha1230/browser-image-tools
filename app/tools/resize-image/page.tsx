@@ -8,6 +8,7 @@ import { createPageMetadata, getPageMetadataEntry } from "@/lib/site-metadata";
 
 const tool = getToolRoute("resize-image");
 const relatedGuides = getGuidesForTool(tool.slug).slice(0, 2);
+const workspaceId = "resize-image-workspace";
 
 export const metadata: Metadata = createPageMetadata(
   getPageMetadataEntry(tool.href),
@@ -23,22 +24,28 @@ export default function ResizeImagePage() {
       ]}
     >
       <PageHero eyebrow="Resize Image" title={tool.title}>
-        <p>{tool.description}</p>
-        <p>{tool.intro}</p>
         <p>
-          이 페이지에서는 여러 이미지의 가로와 세로 픽셀 크기를 브라우저 안에서
-          다시 조정하고, 파일별 원본과 결과 해상도를 비교한 뒤 성공한 파일을 ZIP으로
-          한 번에 다운로드할 수 있습니다.
+          {tool.description} {tool.intro} 여러 이미지의 가로와 세로 픽셀 크기를
+          브라우저 안에서 다시 조정하고, 파일별 원본과 결과 해상도를 비교한 뒤
+          성공한 파일을 ZIP으로 한 번에 다운로드할 수 있습니다.
         </p>
         <div className="hero__actions">
-          <Link className="button-link" href="/tools">
-            도구 허브로 돌아가기
-          </Link>
+          <a className="button-link" href={`#${workspaceId}`}>
+            바로 파일 추가하기
+          </a>
           <Link className="button-muted" href="/privacy">
             로컬 처리 원칙 보기
           </Link>
         </div>
       </PageHero>
+
+      <ToolShell
+        title={tool.title}
+        description="여러 이미지의 해상도를 로컬에서 조정하고, 원본과 결과 크기를 비교한 뒤 성공한 결과를 개별 또는 ZIP으로 다운로드합니다."
+        primaryActionLabel="이미지 크기 조절하기"
+        sectionId={workspaceId}
+        variant="resize"
+      />
 
       <PageSection
         title="이미지 크기 조절이 하는 일"
@@ -151,13 +158,6 @@ export default function ResizeImagePage() {
           ))}
         </div>
       </PageSection>
-
-      <ToolShell
-        title={tool.title}
-        description="여러 이미지의 해상도를 로컬에서 조정하고, 원본과 결과 크기를 비교한 뒤 성공한 결과를 개별 또는 ZIP으로 다운로드합니다."
-        primaryActionLabel="이미지 크기 조절하기"
-        variant="resize"
-      />
     </PageLayout>
   );
 }
