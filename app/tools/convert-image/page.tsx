@@ -25,9 +25,9 @@ export default function ConvertImagePage() {
         <p>{tool.description}</p>
         <p>{tool.intro}</p>
         <p>
-          이 페이지에서는 이미지 1개를 브라우저 안에서 JPEG, PNG, WebP 가운데
-          다른 형식으로 다시 저장하고, 원본과 결과 정보를 비교한 뒤 바로
-          다운로드할 수 있습니다.
+          이 페이지에서는 여러 이미지를 브라우저 안에서 JPEG, PNG, WebP 가운데
+          다른 형식으로 다시 저장하고, 원본과 결과 정보를 비교한 뒤 성공한 파일을
+          ZIP으로 한 번에 다운로드할 수 있습니다.
         </p>
         <div className="hero__actions">
           <Link className="button-link" href="/tools">
@@ -117,11 +117,11 @@ export default function ConvertImagePage() {
 
       <PageSection title="현재 범위와 안내">
         <ul className="chip-list">
-          <li>이번 티켓에서는 단일 파일 포맷 변환만 지원합니다.</li>
-          <li>출력 형식은 원본과 다른 JPEG, PNG, WebP 중 하나를 선택합니다.</li>
+          <li>출력 형식은 업로드한 여러 파일에 공통으로 적용되는 JPEG, PNG, WebP 중 하나를 선택합니다.</li>
+          <li>원본과 같은 형식을 선택한 파일은 개별 실패로 표시하고 나머지 파일은 계속 처리합니다.</li>
           <li>변환 결과 파일명에는 `-converted`가 붙고 확장자는 출력 형식에 맞춰 바뀝니다.</li>
           <li>브라우저 캔버스를 다시 거치므로 EXIF 같은 메타데이터는 유지되지 않을 수 있습니다.</li>
-          <li>배치 변환과 일괄 다운로드는 이번 티켓 범위에 포함하지 않습니다.</li>
+          <li>성공한 결과만 ZIP으로 함께 다운로드할 수 있습니다.</li>
         </ul>
       </PageSection>
 
@@ -145,13 +145,13 @@ export default function ConvertImagePage() {
           </div>
           <div className="card">
             <h3>변환 결과 비교</h3>
-            <p>원본과 결과 형식, 파일 크기, 해상도, 다운로드 파일명을 비교합니다.</p>
+            <p>원본과 결과 형식, 파일 크기, 해상도, ZIP 포함 여부를 파일별로 비교합니다.</p>
           </div>
           <div className="card">
             <h3>오류 처리</h3>
             <p>
-              지원하지 않는 형식, 단일 파일 제한, 브라우저 인코딩 실패를 모두
-              사용자 메시지로 안내합니다.
+              지원하지 않는 형식과 브라우저 인코딩 실패, 원본과 같은 형식 선택에
+              따른 부분 실패를 모두 사용자 메시지로 안내합니다.
             </p>
           </div>
         </div>
@@ -159,7 +159,7 @@ export default function ConvertImagePage() {
 
       <ToolShell
         title={tool.title}
-        description="이미지 1개의 형식을 로컬에서 JPEG, PNG, WebP 중 다른 형식으로 변환하고, 전후 정보를 비교한 뒤 바로 다운로드합니다."
+        description="여러 이미지의 형식을 로컬에서 JPEG, PNG, WebP 중 다른 형식으로 변환하고, 전후 정보를 비교한 뒤 성공한 결과를 개별 또는 ZIP으로 다운로드합니다."
         primaryActionLabel="이미지 포맷 변환하기"
         variant="convert"
       />

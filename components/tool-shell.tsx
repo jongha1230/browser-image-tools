@@ -13,7 +13,6 @@ import {
 import { useImageUploads } from "@/components/image-upload-provider";
 import {
   compressionOutputOptions,
-  createCompressedFileName,
   getCompressionDeltaPercent,
   getCompressionMimeTypeLabel,
   isQualityAdjustableFormat,
@@ -22,10 +21,22 @@ import {
 } from "@/lib/compress-image";
 import {
   conversionOutputOptions,
-  createConvertedFileName,
   getConversionOutputDescription,
   getDefaultConversionMimeType,
 } from "@/lib/convert-image";
+import {
+  createImageProcessingWorkerClient,
+  isUnsupportedWorkerError,
+  processImageFileOnMainThread,
+} from "@/lib/image-processing-client";
+import {
+  createBatchZipFileName,
+  createProcessingSignature,
+  resolveImageProcessingPlan,
+  type ImageProcessOptions,
+  type ImageProcessVariant,
+  type ProcessedImagePayload,
+} from "@/lib/image-processing";
 import {
   formatFileSize,
   getSupportedImageMimeType,
@@ -36,13 +47,12 @@ import {
 import {
   calculateHeightFromWidth,
   calculateWidthFromHeight,
-  createResizedFileName,
   fitWithinResizePreset,
   resizePresetOptions,
   validateResizeDimensions,
   type ResizeDimensions,
 } from "@/lib/resize-image";
-import { createExifRemovedFileName } from "@/lib/remove-exif";
+import { createStoredZipArchive } from "@/lib/zip-archive";
 
 type StepKey = "upload" | "options" | "export";
 type ToolShellVariant =
@@ -52,48 +62,13 @@ type ToolShellVariant =
   | "convert"
   | "removeExif";
 
-type CompressionResult = {
-  blob: Blob;
-  fileName: string;
-  mimeType: SupportedImageMimeType;
-  outputFormat: CompressionOutputFormat;
-  previewUrl: string;
-  quality: number;
-  sourceId: string;
-  width: number;
-  height: number;
+type QueueItemState = {
+  status: "queued" | "processing" | "success" | "error";
+  errorMessage?: string;
+  result?: ProcessedImagePayload;
 };
 
-type ResizeResult = {
-  blob: Blob;
-  fileName: string;
-  mimeType: SupportedImageMimeType;
-  previewUrl: string;
-  sourceId: string;
-  width: number;
-  height: number;
-};
-
-type ConvertResult = {
-  blob: Blob;
-  fileName: string;
-  mimeType: SupportedImageMimeType;
-  previewUrl: string;
-  quality: number;
-  sourceId: string;
-  width: number;
-  height: number;
-};
-
-type RemoveExifResult = {
-  blob: Blob;
-  fileName: string;
-  mimeType: SupportedImageMimeType;
-  previewUrl: string;
-  sourceId: string;
-  width: number;
-  height: number;
-};
+type ProcessingEngine = "worker" | "main";
 
 const stepLabels: Record<StepKey, string> = {
   upload: "파일 준비",
@@ -146,38 +121,24 @@ function loadImageElement(sourceUrl: string) {
   });
 }
 
-function canvasToBlob(
-  canvas: HTMLCanvasElement,
-  mimeType: SupportedImageMimeType,
-  quality?: number,
-) {
-  return new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) {
-          reject(
-            new Error(
-              "브라우저가 결과 파일을 만들지 못했습니다. 다른 형식이나 더 작은 크기로 다시 시도해 주세요.",
-            ),
-          );
-          return;
-        }
-
-        resolve(blob);
-      },
-      mimeType,
-      quality,
-    );
-  });
-}
-
-function downloadBlobUrl(blobUrl: string, fileName: string) {
+function downloadBlob(blob: Blob, fileName: string) {
+  const blobUrl = URL.createObjectURL(blob);
   const link = document.createElement("a");
 
   link.href = blobUrl;
   link.download = fileName;
   link.rel = "noopener";
   link.click();
+
+  window.setTimeout(() => {
+    URL.revokeObjectURL(blobUrl);
+  }, 1_000);
+}
+
+function yieldToBrowser() {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, 0);
+  });
 }
 
 function formatCompressionSummary(originalBytes: number, outputBytes: number) {
@@ -230,6 +191,82 @@ function getResizeDimensionValue(value: string) {
   return Number(trimmedValue);
 }
 
+function getVariantLabel(variant: ToolShellVariant) {
+  if (variant === "compress") {
+    return "브라우저 로컬 배치 압축 활성화";
+  }
+
+  if (variant === "resize") {
+    return "브라우저 로컬 배치 리사이즈 활성화";
+  }
+
+  if (variant === "convert") {
+    return "브라우저 로컬 배치 포맷 변환 활성화";
+  }
+
+  if (variant === "removeExif") {
+    return "브라우저 로컬 배치 EXIF 제거 활성화";
+  }
+
+  return "브라우저 로컬 업로드 활성화";
+}
+
+function getQueueStatusLabel(status: QueueItemState["status"]) {
+  if (status === "processing") {
+    return "처리 중";
+  }
+
+  if (status === "success") {
+    return "완료";
+  }
+
+  if (status === "error") {
+    return "실패";
+  }
+
+  return "대기 중";
+}
+
+function getEngineLabel(engine: ProcessingEngine) {
+  return engine === "worker" ? "웹 워커 우선" : "메인 스레드";
+}
+
+function getToolVariant(variant: ToolShellVariant): ImageProcessVariant | null {
+  if (variant === "default") {
+    return null;
+  }
+
+  return variant;
+}
+
+function getDropzoneCopy(
+  variant: ToolShellVariant,
+  keepAspectRatio: boolean,
+  skippedConvertCount: number,
+) {
+  if (variant === "compress") {
+    return "같은 품질과 출력 형식을 큐 전체에 일괄 적용";
+  }
+
+  if (variant === "resize") {
+    return keepAspectRatio
+      ? "비율 유지 켜짐: 각 파일이 지정한 박스 안에 맞게 개별 비율 유지"
+      : "비율 유지 꺼짐: 모든 파일을 같은 가로·세로 값으로 저장";
+  }
+
+  if (variant === "convert") {
+    return skippedConvertCount > 0
+      ? `${skippedConvertCount}개 파일은 원본과 같은 형식을 선택하면 실패로 표시`
+      : "선택한 출력 형식을 큐 전체에 일괄 적용";
+  }
+
+  if (variant === "removeExif") {
+    return "같은 형식으로 다시 저장해 큐 전체의 메타데이터 노출 가능성 축소";
+  }
+
+  return "이후 도구 페이지에서도 같은 업로드 상태 재사용 가능";
+}
+
 export function ToolShell({
   title,
   description,
@@ -250,17 +287,21 @@ export function ToolShell({
     "width" | "height"
   >("width");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isPreparingZip, setIsPreparingZip] = useState(false);
   const [processingError, setProcessingError] = useState<string | null>(null);
-  const [sourceDimensions, setSourceDimensions] =
+  const [processingNote, setProcessingNote] = useState<string | null>(null);
+  const [referenceDimensions, setReferenceDimensions] =
     useState<ResizeDimensions | null>(null);
-  const [compressionResult, setCompressionResult] =
-    useState<CompressionResult | null>(null);
-  const [resizeResult, setResizeResult] = useState<ResizeResult | null>(null);
-  const [convertResult, setConvertResult] = useState<ConvertResult | null>(null);
-  const [removeExifResult, setRemoveExifResult] =
-    useState<RemoveExifResult | null>(null);
+  const [queueState, setQueueState] = useState<Record<string, QueueItemState>>(
+    {},
+  );
+  const [processingEngine, setProcessingEngine] =
+    useState<ProcessingEngine>("main");
   const dragDepthRef = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const runIdRef = useRef(0);
+  const workerClientRef =
+    useRef<ReturnType<typeof createImageProcessingWorkerClient> | null>(null);
   const {
     addFiles,
     clearErrors,
@@ -274,38 +315,23 @@ export function ToolShell({
   const isResizeTool = variant === "resize";
   const isConvertTool = variant === "convert";
   const isRemoveExifTool = variant === "removeExif";
-  const isSingleFileTool =
-    isCompressTool || isResizeTool || isConvertTool || isRemoveExifTool;
+  const toolVariant = getToolVariant(variant);
   const selectedItem = items[0] ?? null;
   const selectedItemId = selectedItem?.id ?? null;
+  const selectedPreviewUrl = selectedItem?.previewUrl ?? null;
   const selectedMimeType = selectedItem
     ? getSupportedImageMimeType(selectedItem.file)
     : null;
-  const selectedPreviewUrl = selectedItem?.previewUrl ?? null;
-  const targetMimeType = selectedItem
-    ? resolveCompressionMimeType(selectedItem.file, outputFormat)
-    : null;
-  const conversionTargetMimeType = selectedItem ? conversionOutputFormat : null;
-  const totalSize = items.reduce((sum, item) => sum + item.file.size, 0);
-  const fileCountLabel =
-    items.length > 0 ? `${items.length}개 파일 준비됨` : "아직 업로드된 파일이 없음";
-  const hasTooManyFiles = isSingleFileTool && items.length > 1;
+  const targetMimeType =
+    isCompressTool && selectedItem
+      ? resolveCompressionMimeType(selectedItem.file, outputFormat)
+      : null;
   const isQualityEnabled = targetMimeType
     ? isQualityAdjustableFormat(targetMimeType)
     : true;
-  const isCompressionResultStale = compressionResult
-    ? compressionResult.sourceId !== selectedItem?.id ||
-      compressionResult.outputFormat !== outputFormat ||
-      compressionResult.quality !== quality
-    : false;
-  const isConvertQualityEnabled = conversionTargetMimeType
-    ? isQualityAdjustableFormat(conversionTargetMimeType)
-    : true;
-  const isConvertResultStale = convertResult
-    ? convertResult.sourceId !== selectedItem?.id ||
-      convertResult.mimeType !== conversionTargetMimeType ||
-      (isConvertQualityEnabled && convertResult.quality !== quality)
-    : false;
+  const isConvertQualityEnabled = isQualityAdjustableFormat(
+    conversionOutputFormat,
+  );
   const resizeValidation = isResizeTool
     ? validateResizeDimensions(resizeWidthValue, resizeHeightValue)
     : null;
@@ -320,123 +346,90 @@ export function ToolShell({
     isResizeTool && resizeValidation && !resizeValidation.ok
       ? resizeValidation.message
       : null;
-  const isResizeResultStale = resizeResult
-    ? resizeResult.sourceId !== selectedItem?.id ||
-      resizeResult.width !== resizeTargetDimensions?.width ||
-      resizeResult.height !== resizeTargetDimensions?.height
-    : false;
-  const isRemoveExifResultStale = removeExifResult
-    ? removeExifResult.sourceId !== selectedItem?.id
-    : false;
-  const processingErrorTitle = isCompressTool
-    ? "압축을 진행할 수 없습니다"
-    : isResizeTool
-      ? "크기 조절을 진행할 수 없습니다"
-      : isConvertTool
-        ? "포맷 변환을 진행할 수 없습니다"
-        : isRemoveExifTool
-          ? "EXIF 제거를 진행할 수 없습니다"
-          : "처리를 진행할 수 없습니다";
-  const singleFileLimitMessage = isCompressTool
-    ? "이미지 압축은 현재 한 번에 1개 파일만 지원합니다. 아래 카드에서 나머지 파일을 제거하면 바로 계속할 수 있습니다."
-    : isResizeTool
-      ? "이미지 크기 조절은 현재 한 번에 1개 파일만 지원합니다. 아래 카드에서 나머지 파일을 제거하면 바로 계속할 수 있습니다."
-      : isConvertTool
-        ? "이미지 포맷 변환은 현재 한 번에 1개 파일만 지원합니다. 아래 카드에서 나머지 파일을 제거하면 바로 계속할 수 있습니다."
-        : "EXIF 제거 도구는 현재 한 번에 1개 파일만 지원합니다. 아래 카드에서 나머지 파일을 제거하면 바로 계속할 수 있습니다.";
+  const skippedConvertCount = isConvertTool
+    ? items.filter(
+        (item) => getSupportedImageMimeType(item.file) === conversionOutputFormat,
+      ).length
+    : 0;
+  const totalSize = items.reduce((sum, item) => sum + item.file.size, 0);
+  const fileCountLabel =
+    items.length > 0 ? `${items.length}개 파일 준비됨` : "아직 업로드된 파일이 없음";
 
-  let statusByStep: Record<StepKey, string>;
+  let currentOptions: ImageProcessOptions | null = null;
 
   if (isCompressTool) {
-    statusByStep = {
-      upload: hasTooManyFiles
-        ? "이미지 압축은 현재 한 번에 1개 파일만 지원합니다. 미리보기 카드에서 하나만 남기면 압축을 계속할 수 있습니다."
-        : selectedItem
-          ? `${selectedItem.file.name} 파일이 준비되었습니다. 이 파일은 브라우저 탭 안에서만 유지되며 서버로 전송되지 않습니다.`
-          : `JPEG, PNG, WebP 이미지 1개를 추가하면 이 페이지에서 바로 용량 비교와 다운로드까지 진행할 수 있습니다.`,
-      options:
-        selectedItem && targetMimeType
-          ? `${getCompressionMimeTypeLabel(targetMimeType)} 형식으로 저장되며, 품질은 ${
-              isQualityEnabled ? `${quality}%` : "무손실 재저장"
-            } 기준으로 적용됩니다.`
-          : "먼저 압축할 이미지를 1개만 준비하면 품질과 출력 형식을 선택할 수 있습니다.",
-      export:
-        compressionResult && !isCompressionResultStale
-          ? `${compressionResult.fileName} 파일이 준비되었습니다. 원본과 결과 크기를 확인한 뒤 바로 다운로드할 수 있습니다.`
-          : "압축을 실행하면 결과 파일 크기, 출력 형식, 저장용 파일명을 이 단계에서 확인할 수 있습니다.",
+    currentOptions = {
+      variant: "compress",
+      outputFormat,
+      quality,
+    };
+  } else if (isResizeTool && resizeValidation && resizeValidation.ok) {
+    currentOptions = {
+      variant: "resize",
+      width: resizeValidation.width,
+      height: resizeValidation.height,
+      keepAspectRatio,
     };
   } else if (isConvertTool) {
-    statusByStep = {
-      upload: hasTooManyFiles
-        ? "이미지 포맷 변환은 현재 한 번에 1개 파일만 지원합니다. 미리보기 카드에서 하나만 남기면 변환을 계속할 수 있습니다."
-        : selectedItem
-          ? `${selectedItem.file.name} 파일이 준비되었습니다. 이 파일은 브라우저 탭 안에서만 유지되며 서버로 전송되지 않습니다.`
-          : `JPEG, PNG, WebP 이미지 1개를 추가하면 이 페이지에서 바로 포맷 변환과 다운로드까지 진행할 수 있습니다.`,
-      options:
-        selectedItem && selectedMimeType && conversionTargetMimeType
-          ? `${getCompressionMimeTypeLabel(selectedMimeType)} 이미지를 ${getCompressionMimeTypeLabel(
-              conversionTargetMimeType,
-            )} 형식으로 저장합니다. ${
-              isConvertQualityEnabled
-                ? `품질은 ${quality}% 기준으로 적용됩니다.`
-                : "PNG는 무손실로 다시 저장됩니다."
-            }`
-          : "먼저 변환할 이미지를 1개만 준비하면 출력 형식과 품질을 선택할 수 있습니다.",
-      export:
-        convertResult && !isConvertResultStale
-          ? `${convertResult.fileName} 파일이 준비되었습니다. 원본과 결과 형식, 파일 크기를 확인한 뒤 바로 다운로드할 수 있습니다.`
-          : "변환을 실행하면 결과 형식, 저장 파일명, 전후 파일 크기를 이 단계에서 확인할 수 있습니다.",
-    };
-  } else if (isResizeTool) {
-    statusByStep = {
-      upload: hasTooManyFiles
-        ? "이미지 크기 조절은 현재 한 번에 1개 파일만 지원합니다. 미리보기 카드에서 하나만 남기면 작업을 계속할 수 있습니다."
-        : selectedItem
-          ? `${selectedItem.file.name} 파일이 준비되었습니다. 이 파일은 브라우저 탭 안에서만 유지되며 서버로 전송되지 않습니다.`
-          : `JPEG, PNG, WebP 이미지 1개를 추가하면 이 페이지에서 바로 해상도 조정과 다운로드까지 진행할 수 있습니다.`,
-      options:
-        selectedItem && sourceDimensions
-          ? resizeTargetDimensions
-            ? `원본 ${formatDimensions(sourceDimensions)} 기준으로 ${formatDimensions(resizeTargetDimensions)} 크기로 저장합니다. 비율 잠금은 ${keepAspectRatio ? "켜짐" : "꺼짐"} 상태입니다.`
-            : `원본 ${formatDimensions(sourceDimensions)} 기준으로 가로와 세로 값을 확인해 주세요.`
-          : "먼저 크기를 조절할 이미지를 1개만 준비하면 가로, 세로, 비율 잠금 옵션을 선택할 수 있습니다.",
-      export:
-        resizeResult && !isResizeResultStale
-          ? `${resizeResult.fileName} 파일이 준비되었습니다. 원본과 결과 해상도, 파일 크기를 확인한 뒤 바로 다운로드할 수 있습니다.`
-          : "크기 조절을 실행하면 결과 해상도, 저장 파일명, 결과 파일 크기를 이 단계에서 확인할 수 있습니다.",
+    currentOptions = {
+      variant: "convert",
+      targetMimeType: conversionOutputFormat,
+      quality,
     };
   } else if (isRemoveExifTool) {
-    statusByStep = {
-      upload: hasTooManyFiles
-        ? "EXIF 제거는 현재 한 번에 1개 파일만 지원합니다. 미리보기 카드에서 하나만 남기면 작업을 계속할 수 있습니다."
-        : selectedItem
-          ? `${selectedItem.file.name} 파일이 준비되었습니다. 이 파일은 브라우저 탭 안에서만 유지되며 서버로 전송되지 않습니다.`
-          : `JPEG, PNG, WebP 이미지 1개를 추가하면 이 페이지에서 바로 메타데이터 제거용 재저장과 다운로드까지 진행할 수 있습니다.`,
-      options:
-        selectedItem && selectedMimeType
-          ? `${getCompressionMimeTypeLabel(selectedMimeType)} 형식으로 다시 저장하며, 위치, 기기, 촬영 시각 같은 EXIF 메타데이터가 제거될 수 있습니다.`
-          : "먼저 메타데이터를 정리할 이미지를 1개만 준비하면 개인정보 안내와 저장 정보를 확인할 수 있습니다.",
-      export:
-        removeExifResult && !isRemoveExifResultStale
-          ? `${removeExifResult.fileName} 파일이 준비되었습니다. 원본과 결과 정보를 확인한 뒤 바로 다운로드할 수 있습니다.`
-          : "EXIF 제거를 실행하면 저장 파일명, 출력 형식, 파일 크기, 개인정보 안내를 이 단계에서 확인할 수 있습니다.",
-    };
-  } else {
-    statusByStep = {
-      upload:
-        items.length > 0
-          ? `${fileCountLabel}. 선택한 이미지는 현재 브라우저 탭 안에서만 유지되며, 이후 도구 페이지에서도 같은 업로드 상태를 재사용할 수 있습니다.`
-          : `JPEG, PNG, WebP 이미지를 업로드하면 이 단계에서 바로 미리보기와 오류 상태를 확인할 수 있습니다.`,
-      options:
-        items.length > 0
-          ? `${items.length}개 파일이 준비되어 있어 다음 단계에서는 도구별 옵션 UI만 추가하면 됩니다.`
-          : "먼저 파일을 올리면 압축 품질, 크기, 출력 포맷, 메타데이터 제거 여부 같은 옵션 패널을 이 단계에 연결할 수 있습니다.",
-      export:
-        items.length > 0
-          ? `현재 업로드 상태와 미리보기가 준비되어 있어 이후 단계에서 결과 비교, 개별 다운로드, 배치 내보내기를 붙일 수 있습니다.`
-          : "업로드가 준비되면 처리 결과 미리보기와 개별 다운로드, 배치 내보내기 흐름이 이 단계에 이어집니다.",
+    currentOptions = {
+      variant: "removeExif",
     };
   }
+
+  const processingSignature = createProcessingSignature(currentOptions);
+  const itemIdsSignature = items.map((item) => item.id).join("|");
+  const successCount = items.filter(
+    (item) => queueState[item.id]?.status === "success",
+  ).length;
+  const errorCount = items.filter(
+    (item) => queueState[item.id]?.status === "error",
+  ).length;
+  const processingCount = items.filter(
+    (item) => queueState[item.id]?.status === "processing",
+  ).length;
+  const completedCount = successCount + errorCount;
+  const progressPercent =
+    items.length > 0 ? Math.round((completedCount / items.length) * 100) : 0;
+  const hasResults = completedCount > 0 || processingCount > 0;
+  const canProcess =
+    toolVariant !== null &&
+    items.length > 0 &&
+    !isProcessing &&
+    (!isResizeTool || Boolean(resizeValidation?.ok));
+  const canDownloadZip =
+    toolVariant !== null && successCount > 0 && !isProcessing && !isPreparingZip;
+
+  let previewPlan: ReturnType<typeof resolveImageProcessingPlan> | null = null;
+
+  if (selectedItem && referenceDimensions && currentOptions) {
+    try {
+      previewPlan = resolveImageProcessingPlan(
+        selectedItem.file,
+        referenceDimensions,
+        currentOptions,
+      );
+    } catch {
+      previewPlan = null;
+    }
+  }
+
+  useEffect(() => {
+    setProcessingEngine(typeof Worker === "undefined" ? "main" : "worker");
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      runIdRef.current += 1;
+      workerClientRef.current?.terminate();
+      workerClientRef.current = null;
+    };
+  }, []);
 
   const handleWindowPaste = useEffectEvent((event: ClipboardEvent) => {
     const target = event.target;
@@ -465,49 +458,28 @@ export function ToolShell({
   }, []);
 
   useEffect(() => {
-    if (!isSingleFileTool) {
-      return;
-    }
-
-    if (!selectedPreviewUrl) {
-      setSourceDimensions(null);
-      setCompressionResult(null);
-      setResizeResult(null);
-      setConvertResult(null);
-      setRemoveExifResult(null);
-      setConversionOutputFormat("image/webp");
-      setProcessingError(null);
-      setResizeWidthValue("");
-      setResizeHeightValue("");
-      setKeepAspectRatio(true);
-      setLastEditedDimension("width");
-      setActiveStep("upload");
-      return;
-    }
-
+    setQueueState({});
     setProcessingError(null);
-    setSourceDimensions(null);
+    setProcessingNote(null);
+  }, [itemIdsSignature, processingSignature, variant]);
 
-    if (isCompressTool) {
-      setCompressionResult(null);
-    }
+  useEffect(() => {
+    if (!selectedPreviewUrl) {
+      setReferenceDimensions(null);
+      setActiveStep("upload");
 
-    if (isResizeTool) {
-      setResizeResult(null);
-      setResizeWidthValue("");
-      setResizeHeightValue("");
-    }
-
-    if (isConvertTool) {
-      setConvertResult(null);
-
-      if (selectedMimeType) {
-        setConversionOutputFormat(getDefaultConversionMimeType(selectedMimeType));
+      if (isResizeTool) {
+        setResizeWidthValue("");
+        setResizeHeightValue("");
+        setKeepAspectRatio(true);
+        setLastEditedDimension("width");
       }
-    }
 
-    if (isRemoveExifTool) {
-      setRemoveExifResult(null);
+      if (isConvertTool) {
+        setConversionOutputFormat("image/webp");
+      }
+
+      return;
     }
 
     let isCancelled = false;
@@ -523,13 +495,17 @@ export function ToolShell({
           height: image.naturalHeight,
         };
 
-        setSourceDimensions(nextDimensions);
+        setReferenceDimensions(nextDimensions);
 
         if (isResizeTool) {
           setResizeWidthValue(String(nextDimensions.width));
           setResizeHeightValue(String(nextDimensions.height));
           setKeepAspectRatio(true);
           setLastEditedDimension("width");
+        }
+
+        if (isConvertTool && selectedMimeType) {
+          setConversionOutputFormat(getDefaultConversionMimeType(selectedMimeType));
         }
       })
       .catch((error: unknown) => {
@@ -547,98 +523,27 @@ export function ToolShell({
     return () => {
       isCancelled = true;
     };
-  }, [
-    isCompressTool,
-    isConvertTool,
-    isRemoveExifTool,
-    isResizeTool,
-    isSingleFileTool,
-    selectedItemId,
-    selectedMimeType,
-    selectedPreviewUrl,
-  ]);
+  }, [isConvertTool, isResizeTool, selectedItemId, selectedMimeType, selectedPreviewUrl]);
 
   useEffect(() => {
-    if (!isSingleFileTool) {
+    if (items.length === 0) {
+      setActiveStep("upload");
       return;
     }
 
-    if (!selectedItem) {
+    if (hasResults) {
+      setActiveStep("export");
       return;
     }
 
-    if (isCompressTool) {
-      setActiveStep(
-        compressionResult && !isCompressionResultStale ? "export" : "options",
-      );
-      return;
-    }
-
-    if (isResizeTool) {
-      setActiveStep(resizeResult && !isResizeResultStale ? "export" : "options");
-      return;
-    }
-
-    if (isConvertTool) {
-      setActiveStep(convertResult && !isConvertResultStale ? "export" : "options");
-      return;
-    }
-
-    if (isRemoveExifTool) {
-      setActiveStep(
-        removeExifResult && !isRemoveExifResultStale ? "export" : "options",
-      );
-    }
-  }, [
-    compressionResult,
-    convertResult,
-    isCompressTool,
-    isCompressionResultStale,
-    isConvertResultStale,
-    isConvertTool,
-    isRemoveExifResultStale,
-    isRemoveExifTool,
-    isResizeResultStale,
-    isResizeTool,
-    isSingleFileTool,
-    removeExifResult,
-    resizeResult,
-    selectedItem,
-  ]);
-
-  useEffect(() => {
-    return () => {
-      if (compressionResult) {
-        URL.revokeObjectURL(compressionResult.previewUrl);
-      }
-    };
-  }, [compressionResult]);
-
-  useEffect(() => {
-    return () => {
-      if (resizeResult) {
-        URL.revokeObjectURL(resizeResult.previewUrl);
-      }
-    };
-  }, [resizeResult]);
-
-  useEffect(() => {
-    return () => {
-      if (convertResult) {
-        URL.revokeObjectURL(convertResult.previewUrl);
-      }
-    };
-  }, [convertResult]);
-
-  useEffect(() => {
-    return () => {
-      if (removeExifResult) {
-        URL.revokeObjectURL(removeExifResult.previewUrl);
-      }
-    };
-  }, [removeExifResult]);
+    setActiveStep("options");
+  }, [hasResults, items.length]);
 
   function openFilePicker() {
+    if (isProcessing) {
+      return;
+    }
+
     inputRef.current?.click();
   }
 
@@ -680,8 +585,19 @@ export function ToolShell({
   function handleQualityChange(event: ChangeEvent<HTMLInputElement>) {
     setQuality(Number(event.currentTarget.value));
     setProcessingError(null);
+    setProcessingNote(null);
 
-    if (selectedItem) {
+    if (items.length > 0) {
+      setActiveStep("options");
+    }
+  }
+
+  function handleCompressOutputChange(event: ChangeEvent<HTMLSelectElement>) {
+    setOutputFormat(event.currentTarget.value as CompressionOutputFormat);
+    setProcessingError(null);
+    setProcessingNote(null);
+
+    if (items.length > 0) {
       setActiveStep("options");
     }
   }
@@ -689,8 +605,9 @@ export function ToolShell({
   function handleConversionOutputChange(event: ChangeEvent<HTMLSelectElement>) {
     setConversionOutputFormat(event.currentTarget.value as SupportedImageMimeType);
     setProcessingError(null);
+    setProcessingNote(null);
 
-    if (selectedItem) {
+    if (items.length > 0) {
       setActiveStep("options");
     }
   }
@@ -701,12 +618,13 @@ export function ToolShell({
     setResizeWidthValue(nextValue);
     setLastEditedDimension("width");
     setProcessingError(null);
+    setProcessingNote(null);
 
-    if (selectedItem) {
+    if (items.length > 0) {
       setActiveStep("options");
     }
 
-    if (!keepAspectRatio || !sourceDimensions) {
+    if (!keepAspectRatio || !referenceDimensions) {
       return;
     }
 
@@ -717,7 +635,7 @@ export function ToolShell({
     }
 
     setResizeHeightValue(
-      String(calculateHeightFromWidth(nextWidth, sourceDimensions)),
+      String(calculateHeightFromWidth(nextWidth, referenceDimensions)),
     );
   }
 
@@ -727,12 +645,13 @@ export function ToolShell({
     setResizeHeightValue(nextValue);
     setLastEditedDimension("height");
     setProcessingError(null);
+    setProcessingNote(null);
 
-    if (selectedItem) {
+    if (items.length > 0) {
       setActiveStep("options");
     }
 
-    if (!keepAspectRatio || !sourceDimensions) {
+    if (!keepAspectRatio || !referenceDimensions) {
       return;
     }
 
@@ -743,7 +662,7 @@ export function ToolShell({
     }
 
     setResizeWidthValue(
-      String(calculateWidthFromHeight(nextHeight, sourceDimensions)),
+      String(calculateWidthFromHeight(nextHeight, referenceDimensions)),
     );
   }
 
@@ -752,12 +671,13 @@ export function ToolShell({
 
     setKeepAspectRatio(nextChecked);
     setProcessingError(null);
+    setProcessingNote(null);
 
-    if (selectedItem) {
+    if (items.length > 0) {
       setActiveStep("options");
     }
 
-    if (!nextChecked || !sourceDimensions) {
+    if (!nextChecked || !referenceDimensions) {
       return;
     }
 
@@ -769,7 +689,7 @@ export function ToolShell({
       }
 
       setResizeWidthValue(
-        String(calculateWidthFromHeight(nextHeight, sourceDimensions)),
+        String(calculateWidthFromHeight(nextHeight, referenceDimensions)),
       );
       return;
     }
@@ -781,20 +701,21 @@ export function ToolShell({
     }
 
     setResizeHeightValue(
-      String(calculateHeightFromWidth(nextWidth, sourceDimensions)),
+      String(calculateHeightFromWidth(nextWidth, referenceDimensions)),
     );
   }
 
   function applyResizePreset(preset: ResizeDimensions) {
     setProcessingError(null);
+    setProcessingNote(null);
 
-    if (selectedItem) {
+    if (items.length > 0) {
       setActiveStep("options");
     }
 
     const nextDimensions =
-      keepAspectRatio && sourceDimensions
-        ? fitWithinResizePreset(sourceDimensions, preset)
+      keepAspectRatio && referenceDimensions
+        ? fitWithinResizePreset(referenceDimensions, preset)
         : preset;
 
     setResizeWidthValue(String(nextDimensions.width));
@@ -802,438 +723,280 @@ export function ToolShell({
     setLastEditedDimension("width");
   }
 
-  async function handleCompress() {
-    if (!selectedItem) {
-      setProcessingError("먼저 압축할 이미지를 추가해 주세요.");
-      setActiveStep("upload");
-      return;
+  function getWorkerClient() {
+    if (!workerClientRef.current) {
+      workerClientRef.current = createImageProcessingWorkerClient();
     }
 
-    if (hasTooManyFiles) {
-      setProcessingError(
-        "이미지 압축은 현재 한 번에 1개 파일만 지원합니다. 미리보기에서 하나만 남긴 뒤 다시 시도해 주세요.",
-      );
-      setActiveStep("upload");
-      return;
-    }
-
-    if (!targetMimeType) {
-      setProcessingError(
-        "이 파일 형식은 현재 압축 출력 대상으로 사용할 수 없습니다.",
-      );
-      return;
-    }
-
-    setIsProcessing(true);
-    setProcessingError(null);
-
-    try {
-      const image = await loadImageElement(selectedItem.previewUrl);
-      const canvas = document.createElement("canvas");
-
-      canvas.width = image.naturalWidth;
-      canvas.height = image.naturalHeight;
-
-      const context = canvas.getContext("2d");
-
-      if (!context) {
-        throw new Error(
-          "브라우저에서 이미지 캔버스를 준비하지 못했습니다. 다른 브라우저에서 다시 시도해 주세요.",
-        );
-      }
-
-      if (targetMimeType === "image/jpeg") {
-        context.fillStyle = "#ffffff";
-        context.fillRect(0, 0, canvas.width, canvas.height);
-      }
-
-      context.drawImage(image, 0, 0, canvas.width, canvas.height);
-
-      const blob = await canvasToBlob(
-        canvas,
-        targetMimeType,
-        isQualityAdjustableFormat(targetMimeType) ? quality / 100 : undefined,
-      );
-      const actualMimeType = getSupportedImageMimeType({
-        name: createCompressedFileName(selectedItem.file.name, targetMimeType),
-        size: blob.size,
-        type: blob.type,
-        lastModified: Date.now(),
-      });
-
-      if (!actualMimeType || actualMimeType !== targetMimeType) {
-        throw new Error(
-          targetMimeType === "image/webp"
-            ? "현재 브라우저에서는 WebP 내보내기를 지원하지 않습니다. JPEG 또는 원본 형식으로 다시 시도해 주세요."
-            : "선택한 출력 형식으로 파일을 저장하지 못했습니다. 다른 형식으로 다시 시도해 주세요.",
-        );
-      }
-
-      setCompressionResult({
-        blob,
-        fileName: createCompressedFileName(selectedItem.file.name, actualMimeType),
-        mimeType: actualMimeType,
-        outputFormat,
-        previewUrl: URL.createObjectURL(blob),
-        quality,
-        sourceId: selectedItem.id,
-        width: image.naturalWidth,
-        height: image.naturalHeight,
-      });
-      setActiveStep("export");
-    } catch (error: unknown) {
-      setProcessingError(
-        error instanceof Error
-          ? error.message
-          : "이미지 압축 중 오류가 발생했습니다. 다시 시도해 주세요.",
-      );
-    } finally {
-      setIsProcessing(false);
-    }
+    return workerClientRef.current;
   }
 
-  async function handleResize() {
-    if (!selectedItem) {
-      setProcessingError("먼저 크기를 조절할 이미지를 추가해 주세요.");
+  async function handleProcessAll() {
+    if (!toolVariant) {
+      return;
+    }
+
+    if (items.length === 0) {
+      setProcessingError("먼저 처리할 이미지를 추가해 주세요.");
       setActiveStep("upload");
       return;
     }
 
-    if (hasTooManyFiles) {
+    if (isResizeTool && (!resizeValidation || !resizeValidation.ok)) {
       setProcessingError(
-        "이미지 크기 조절은 현재 한 번에 1개 파일만 지원합니다. 미리보기에서 하나만 남긴 뒤 다시 시도해 주세요.",
-      );
-      setActiveStep("upload");
-      return;
-    }
-
-    if (!selectedMimeType) {
-      setProcessingError(
-        "이 파일 형식은 현재 크기 조절 출력 대상으로 사용할 수 없습니다.",
-      );
-      return;
-    }
-
-    if (!resizeValidation || !resizeValidation.ok) {
-      setProcessingError(
-        resizeValidation?.message ??
-          "가로와 세로 값을 다시 확인해 주세요.",
+        resizeValidation?.message ?? "가로와 세로 값을 다시 확인해 주세요.",
       );
       setActiveStep("options");
       return;
     }
 
-    setIsProcessing(true);
-    setProcessingError(null);
-
-    try {
-      const image = await loadImageElement(selectedItem.previewUrl);
-      const canvas = document.createElement("canvas");
-
-      canvas.width = resizeValidation.width;
-      canvas.height = resizeValidation.height;
-
-      if (
-        canvas.width !== resizeValidation.width ||
-        canvas.height !== resizeValidation.height
-      ) {
-        throw new Error(
-          "입력한 크기가 현재 브라우저에서 처리 가능한 범위를 넘습니다. 더 작은 값으로 다시 시도해 주세요.",
-        );
-      }
-
-      const context = canvas.getContext("2d");
-
-      if (!context) {
-        throw new Error(
-          "브라우저에서 이미지 캔버스를 준비하지 못했습니다. 다른 브라우저에서 다시 시도해 주세요.",
-        );
-      }
-
-      if (selectedMimeType === "image/jpeg") {
-        context.fillStyle = "#ffffff";
-        context.fillRect(0, 0, canvas.width, canvas.height);
-      }
-
-      context.drawImage(image, 0, 0, canvas.width, canvas.height);
-
-      const blob = await canvasToBlob(canvas, selectedMimeType);
-      const actualMimeType = getSupportedImageMimeType({
-        name: createResizedFileName(selectedItem.file.name, selectedMimeType),
-        size: blob.size,
-        type: blob.type,
-        lastModified: Date.now(),
-      });
-
-      if (!actualMimeType || actualMimeType !== selectedMimeType) {
-        throw new Error(
-          selectedMimeType === "image/webp"
-            ? "현재 브라우저에서는 WebP 리사이즈 내보내기를 지원하지 않습니다. 다른 형식으로 다시 저장해 주세요."
-            : "선택한 형식으로 리사이즈 결과를 저장하지 못했습니다. 다른 이미지로 다시 시도해 주세요.",
-        );
-      }
-
-      setResizeResult({
-        blob,
-        fileName: createResizedFileName(selectedItem.file.name, actualMimeType),
-        mimeType: actualMimeType,
-        previewUrl: URL.createObjectURL(blob),
-        sourceId: selectedItem.id,
-        width: resizeValidation.width,
-        height: resizeValidation.height,
-      });
-      setActiveStep("export");
-    } catch (error: unknown) {
-      setProcessingError(
-        error instanceof Error
-          ? error.message
-          : "이미지 크기 조절 중 오류가 발생했습니다. 다시 시도해 주세요.",
-      );
-    } finally {
-      setIsProcessing(false);
-    }
-  }
-
-  async function handleConvert() {
-    if (!selectedItem) {
-      setProcessingError("먼저 변환할 이미지를 추가해 주세요.");
-      setActiveStep("upload");
-      return;
-    }
-
-    if (hasTooManyFiles) {
-      setProcessingError(
-        "이미지 포맷 변환은 현재 한 번에 1개 파일만 지원합니다. 미리보기에서 하나만 남긴 뒤 다시 시도해 주세요.",
-      );
-      setActiveStep("upload");
-      return;
-    }
-
-    if (!selectedMimeType) {
-      setProcessingError(
-        "이 파일 형식은 현재 포맷 변환 대상으로 사용할 수 없습니다.",
-      );
-      return;
-    }
-
-    if (selectedMimeType === conversionOutputFormat) {
-      setProcessingError("출력 형식은 원본과 다른 형식을 선택해 주세요.");
+    if (!currentOptions) {
+      setProcessingError("현재 설정을 확인한 뒤 다시 시도해 주세요.");
       setActiveStep("options");
       return;
     }
 
+    const runId = runIdRef.current + 1;
+    let engine = processingEngine;
+
+    runIdRef.current = runId;
     setIsProcessing(true);
+    setProcessingError(null);
+    setProcessingNote(null);
+    setActiveStep("export");
+    setQueueState(
+      Object.fromEntries(
+        items.map((item) => [
+          item.id,
+          { status: "queued" } satisfies QueueItemState,
+        ]),
+      ),
+    );
+
+    for (const item of items) {
+      if (runIdRef.current !== runId) {
+        return;
+      }
+
+      setQueueState((current) => ({
+        ...current,
+        [item.id]: {
+          status: "processing",
+        },
+      }));
+
+      try {
+        let result: ProcessedImagePayload;
+
+        if (engine === "worker") {
+          try {
+            result = await getWorkerClient().process(item.file, currentOptions);
+          } catch (error: unknown) {
+            if (!isUnsupportedWorkerError(error)) {
+              throw error;
+            }
+
+            workerClientRef.current?.terminate();
+            workerClientRef.current = null;
+            engine = "main";
+            setProcessingEngine("main");
+            setProcessingNote(
+              "현재 브라우저에서는 백그라운드 작업자를 사용할 수 없어 이번 실행은 메인 스레드에서 이어집니다.",
+            );
+            result = await processImageFileOnMainThread(
+              item.file,
+              item.previewUrl,
+              currentOptions,
+            );
+          }
+        } else {
+          result = await processImageFileOnMainThread(
+            item.file,
+            item.previewUrl,
+            currentOptions,
+          );
+        }
+
+        if (runIdRef.current !== runId) {
+          return;
+        }
+
+        setQueueState((current) => ({
+          ...current,
+          [item.id]: {
+            status: "success",
+            result,
+          },
+        }));
+      } catch (error: unknown) {
+        if (runIdRef.current !== runId) {
+          return;
+        }
+
+        setQueueState((current) => ({
+          ...current,
+          [item.id]: {
+            status: "error",
+            errorMessage:
+              error instanceof Error
+                ? error.message
+                : "이미지 처리 중 오류가 발생했습니다. 다시 시도해 주세요.",
+          },
+        }));
+      }
+
+      await yieldToBrowser();
+    }
+
+    if (engine === "worker") {
+      setProcessingEngine("worker");
+    }
+
+    setIsProcessing(false);
+  }
+
+  async function handleDownloadZip() {
+    if (!toolVariant || successCount === 0) {
+      return;
+    }
+
+    setIsPreparingZip(true);
     setProcessingError(null);
 
     try {
-      const image = await loadImageElement(selectedItem.previewUrl);
-      const canvas = document.createElement("canvas");
-
-      canvas.width = image.naturalWidth;
-      canvas.height = image.naturalHeight;
-
-      const context = canvas.getContext("2d");
-
-      if (!context) {
-        throw new Error(
-          "브라우저에서 이미지 캔버스를 준비하지 못했습니다. 다른 브라우저에서 다시 시도해 주세요.",
-        );
-      }
-
-      if (conversionOutputFormat === "image/jpeg") {
-        context.fillStyle = "#ffffff";
-        context.fillRect(0, 0, canvas.width, canvas.height);
-      }
-
-      context.drawImage(image, 0, 0, canvas.width, canvas.height);
-
-      const blob = await canvasToBlob(
-        canvas,
-        conversionOutputFormat,
-        isQualityAdjustableFormat(conversionOutputFormat)
-          ? quality / 100
-          : undefined,
+      const entries = await Promise.all(
+        items
+          .map((item) => queueState[item.id]?.result)
+          .filter((result): result is ProcessedImagePayload => result !== undefined)
+          .map(async (result) => ({
+            fileName: result.fileName,
+            data: new Uint8Array(await result.blob.arrayBuffer()),
+          })),
       );
-      const actualMimeType = getSupportedImageMimeType({
-        name: createConvertedFileName(
-          selectedItem.file.name,
-          conversionOutputFormat,
-        ),
-        size: blob.size,
-        type: blob.type,
-        lastModified: Date.now(),
-      });
+      const archive = createStoredZipArchive(entries);
 
-      if (!actualMimeType || actualMimeType !== conversionOutputFormat) {
-        throw new Error(
-          conversionOutputFormat === "image/webp"
-            ? "현재 브라우저에서는 WebP 변환 내보내기를 지원하지 않습니다. JPEG 또는 PNG로 다시 시도해 주세요."
-            : conversionOutputFormat === "image/jpeg"
-              ? "선택한 이미지를 JPEG로 저장하지 못했습니다. PNG 또는 WebP로 다시 시도해 주세요."
-              : "선택한 이미지를 PNG로 저장하지 못했습니다. JPEG 또는 WebP로 다시 시도해 주세요.",
-        );
-      }
-
-      setConvertResult({
-        blob,
-        fileName: createConvertedFileName(selectedItem.file.name, actualMimeType),
-        mimeType: actualMimeType,
-        previewUrl: URL.createObjectURL(blob),
-        quality,
-        sourceId: selectedItem.id,
-        width: image.naturalWidth,
-        height: image.naturalHeight,
-      });
-      setActiveStep("export");
+      downloadBlob(
+        new Blob([archive], { type: "application/zip" }),
+        createBatchZipFileName(toolVariant),
+      );
     } catch (error: unknown) {
       setProcessingError(
         error instanceof Error
           ? error.message
-          : "이미지 포맷 변환 중 오류가 발생했습니다. 다시 시도해 주세요.",
+          : "ZIP 파일을 만드는 중 오류가 발생했습니다. 다시 시도해 주세요.",
       );
     } finally {
-      setIsProcessing(false);
+      setIsPreparingZip(false);
     }
   }
 
-  async function handleRemoveExif() {
-    if (!selectedItem) {
-      setProcessingError("먼저 메타데이터를 정리할 이미지를 추가해 주세요.");
-      setActiveStep("upload");
+  function handleDownloadResult(itemId: string) {
+    const result = queueState[itemId]?.result;
+
+    if (!result) {
       return;
     }
 
-    if (hasTooManyFiles) {
-      setProcessingError(
-        "EXIF 제거는 현재 한 번에 1개 파일만 지원합니다. 미리보기에서 하나만 남긴 뒤 다시 시도해 주세요.",
-      );
-      setActiveStep("upload");
-      return;
-    }
-
-    if (!selectedMimeType) {
-      setProcessingError(
-        "이 파일 형식은 현재 EXIF 제거 출력 대상으로 사용할 수 없습니다.",
-      );
-      return;
-    }
-
-    setIsProcessing(true);
-    setProcessingError(null);
-
-    try {
-      const image = await loadImageElement(selectedItem.previewUrl);
-      const canvas = document.createElement("canvas");
-
-      canvas.width = image.naturalWidth;
-      canvas.height = image.naturalHeight;
-
-      const context = canvas.getContext("2d");
-
-      if (!context) {
-        throw new Error(
-          "브라우저에서 이미지 캔버스를 준비하지 못했습니다. 다른 브라우저에서 다시 시도해 주세요.",
-        );
-      }
-
-      if (selectedMimeType === "image/jpeg") {
-        context.fillStyle = "#ffffff";
-        context.fillRect(0, 0, canvas.width, canvas.height);
-      }
-
-      context.drawImage(image, 0, 0, canvas.width, canvas.height);
-
-      const blob = await canvasToBlob(
-        canvas,
-        selectedMimeType,
-        isQualityAdjustableFormat(selectedMimeType) ? 0.92 : undefined,
-      );
-      const actualMimeType = getSupportedImageMimeType({
-        name: createExifRemovedFileName(selectedItem.file.name, selectedMimeType),
-        size: blob.size,
-        type: blob.type,
-        lastModified: Date.now(),
-      });
-
-      if (!actualMimeType || actualMimeType !== selectedMimeType) {
-        throw new Error(
-          selectedMimeType === "image/webp"
-            ? "현재 브라우저에서는 WebP 형식으로 메타데이터 제거 결과를 다시 저장하지 못했습니다. 다른 브라우저에서 다시 시도해 주세요."
-            : "선택한 형식으로 메타데이터 제거 결과를 저장하지 못했습니다. 다른 이미지로 다시 시도해 주세요.",
-        );
-      }
-
-      setRemoveExifResult({
-        blob,
-        fileName: createExifRemovedFileName(selectedItem.file.name, actualMimeType),
-        mimeType: actualMimeType,
-        previewUrl: URL.createObjectURL(blob),
-        sourceId: selectedItem.id,
-        width: image.naturalWidth,
-        height: image.naturalHeight,
-      });
-      setActiveStep("export");
-    } catch (error: unknown) {
-      setProcessingError(
-        error instanceof Error
-          ? error.message
-          : "EXIF 제거 중 오류가 발생했습니다. 다시 시도해 주세요.",
-      );
-    } finally {
-      setIsProcessing(false);
-    }
+    downloadBlob(result.blob, result.fileName);
   }
 
-  function handleDownloadCompressionResult() {
-    if (!compressionResult) {
-      return;
-    }
+  let statusByStep: Record<StepKey, string>;
 
-    downloadBlobUrl(compressionResult.previewUrl, compressionResult.fileName);
-  }
-
-  function handleDownloadResizeResult() {
-    if (!resizeResult) {
-      return;
-    }
-
-    downloadBlobUrl(resizeResult.previewUrl, resizeResult.fileName);
-  }
-
-  function handleDownloadConvertResult() {
-    if (!convertResult) {
-      return;
-    }
-
-    downloadBlobUrl(convertResult.previewUrl, convertResult.fileName);
-  }
-
-  function handleDownloadRemoveExifResult() {
-    if (!removeExifResult) {
-      return;
-    }
-
-    downloadBlobUrl(removeExifResult.previewUrl, removeExifResult.fileName);
+  if (isCompressTool) {
+    statusByStep = {
+      upload:
+        items.length > 0
+          ? `${items.length}개 파일이 준비되었습니다. 같은 출력 형식과 품질을 전체 큐에 한 번에 적용하며 모든 파일은 현재 브라우저 탭 안에서만 처리됩니다.`
+          : `JPEG, PNG, WebP 이미지를 여러 개 추가하면 이 페이지에서 바로 배치 압축과 ZIP 다운로드까지 진행할 수 있습니다.`,
+      options:
+        items.length > 0 && targetMimeType
+          ? `${items.length}개 파일에 ${getCompressionMimeTypeLabel(targetMimeType)} 형식과 ${
+              isQualityEnabled ? `${quality}% 품질` : "무손실 재저장"
+            }을 일괄 적용합니다.`
+          : "먼저 압축할 이미지를 추가하면 배치 품질과 출력 형식을 선택할 수 있습니다.",
+      export:
+        hasResults
+          ? `총 ${items.length}개 중 ${successCount}개 성공, ${errorCount}개 실패입니다. 성공한 결과만 개별 다운로드와 ZIP 내보내기에 포함됩니다.`
+          : "압축을 실행하면 파일별 성공/실패 상태와 ZIP 내보내기 준비 여부를 이 단계에서 확인할 수 있습니다.",
+    };
+  } else if (isResizeTool) {
+    statusByStep = {
+      upload:
+        items.length > 0
+          ? `${items.length}개 파일이 준비되었습니다. 같은 박스 크기를 큐 전체에 적용하고 비율 유지 여부에 따라 각 파일을 개별 계산합니다.`
+          : `JPEG, PNG, WebP 이미지를 여러 개 추가하면 이 페이지에서 바로 배치 리사이즈와 ZIP 다운로드까지 진행할 수 있습니다.`,
+      options:
+        items.length > 0 && resizeTargetDimensions
+          ? `${items.length}개 파일을 ${formatDimensions(resizeTargetDimensions)} 기준으로 저장합니다. 비율 잠금은 ${
+              keepAspectRatio ? "켜짐" : "꺼짐"
+            } 상태입니다.`
+          : "먼저 리사이즈할 이미지를 추가하면 배치 가로·세로 값과 비율 잠금 옵션을 선택할 수 있습니다.",
+      export:
+        hasResults
+          ? `총 ${items.length}개 중 ${successCount}개 성공, ${errorCount}개 실패입니다. 성공한 결과만 개별 다운로드와 ZIP 내보내기에 포함됩니다.`
+          : "크기 조절을 실행하면 파일별 성공/실패 상태와 ZIP 내보내기 준비 여부를 이 단계에서 확인할 수 있습니다.",
+    };
+  } else if (isConvertTool) {
+    statusByStep = {
+      upload:
+        items.length > 0
+          ? `${items.length}개 파일이 준비되었습니다. 선택한 출력 형식을 전체 큐에 적용하며 원본과 같은 형식인 파일은 개별 실패로 분리해 표시합니다.`
+          : `JPEG, PNG, WebP 이미지를 여러 개 추가하면 이 페이지에서 바로 배치 변환과 ZIP 다운로드까지 진행할 수 있습니다.`,
+      options:
+        items.length > 0
+          ? `${items.length}개 파일에 ${getCompressionMimeTypeLabel(conversionOutputFormat)} 출력 형식을 적용합니다. ${
+              isConvertQualityEnabled ? `${quality}% 품질` : "PNG 무손실 저장"
+            } 기준으로 내보냅니다.`
+          : "먼저 변환할 이미지를 추가하면 출력 형식과 품질을 선택할 수 있습니다.",
+      export:
+        hasResults
+          ? `총 ${items.length}개 중 ${successCount}개 성공, ${errorCount}개 실패입니다. 성공한 결과만 개별 다운로드와 ZIP 내보내기에 포함됩니다.`
+          : "포맷 변환을 실행하면 파일별 성공/실패 상태와 ZIP 내보내기 준비 여부를 이 단계에서 확인할 수 있습니다.",
+    };
+  } else if (isRemoveExifTool) {
+    statusByStep = {
+      upload:
+        items.length > 0
+          ? `${items.length}개 파일이 준비되었습니다. 각 파일을 같은 형식으로 다시 저장해 EXIF 메타데이터 노출 가능성을 줄이고 결과는 브라우저 안에서만 유지합니다.`
+          : `JPEG, PNG, WebP 이미지를 여러 개 추가하면 이 페이지에서 바로 배치 EXIF 제거와 ZIP 다운로드까지 진행할 수 있습니다.`,
+      options:
+        items.length > 0
+          ? `${items.length}개 파일을 원본과 같은 형식으로 다시 저장합니다. 성공한 결과는 GPS 위치, 기기, 촬영 시각 같은 메타데이터 제거용 재저장 흐름으로 묶어 관리합니다.`
+          : "먼저 EXIF를 정리할 이미지를 추가하면 배치 동작과 현재 제한을 확인할 수 있습니다.",
+      export:
+        hasResults
+          ? `총 ${items.length}개 중 ${successCount}개 성공, ${errorCount}개 실패입니다. 성공한 결과만 개별 다운로드와 ZIP 내보내기에 포함됩니다.`
+          : "EXIF 제거를 실행하면 파일별 성공/실패 상태와 ZIP 내보내기 준비 여부를 이 단계에서 확인할 수 있습니다.",
+    };
+  } else {
+    statusByStep = {
+      upload:
+        items.length > 0
+          ? `${fileCountLabel}. 선택한 이미지는 현재 브라우저 탭 안에서만 유지되며, 이후 도구 페이지에서도 같은 업로드 상태를 재사용할 수 있습니다.`
+          : `JPEG, PNG, WebP 이미지를 업로드하면 이 단계에서 바로 미리보기와 오류 상태를 확인할 수 있습니다.`,
+      options:
+        items.length > 0
+          ? `${items.length}개 파일이 준비되어 있어 다음 단계에서는 도구별 옵션 UI만 추가하면 됩니다.`
+          : "먼저 파일을 올리면 압축 품질, 크기, 출력 포맷, 메타데이터 제거 여부 같은 옵션 패널을 이 단계에 연결할 수 있습니다.",
+      export:
+        items.length > 0
+          ? `현재 업로드 상태와 미리보기가 준비되어 있어 이후 단계에서 결과 비교, 개별 다운로드, 배치 내보내기를 붙일 수 있습니다.`
+          : "업로드가 준비되면 처리 결과 미리보기와 개별 다운로드, 배치 내보내기 흐름이 이 단계에 이어집니다.",
+    };
   }
 
   return (
-    <section className="tool-shell" aria-labelledby="tool-shell-title">
+    <section
+      aria-busy={isProcessing || isPreparingZip}
+      aria-labelledby="tool-shell-title"
+      className="tool-shell"
+    >
       <div className="tool-shell__header">
         <div>
           <h2 id="tool-shell-title">{title} 작업 패널</h2>
           <p>{description}</p>
         </div>
-        <span className="tool-shell__badge">
-          {isCompressTool
-            ? "브라우저 로컬 압축 활성화"
-            : isResizeTool
-              ? "브라우저 로컬 리사이즈 활성화"
-              : isConvertTool
-                ? "브라우저 로컬 포맷 변환 활성화"
-                : isRemoveExifTool
-                  ? "브라우저 로컬 EXIF 제거 활성화"
-                  : "브라우저 로컬 업로드 활성화"}
-        </span>
+        <span className="tool-shell__badge">{getVariantLabel(variant)}</span>
       </div>
 
       <div className="tool-shell__workspace">
@@ -1250,15 +1013,15 @@ export function ToolShell({
             accept={supportedImageAccept}
             aria-label="이미지 파일 선택"
             className="visually-hidden"
-            multiple={!isSingleFileTool}
+            disabled={isProcessing}
+            multiple
             onChange={handleInputChange}
             type="file"
           />
-          <strong>이미지를 끌어 놓거나 파일 선택으로 추가하세요</strong>
+          <strong>이미지를 끌어 놓거나 파일 선택으로 여러 개 추가하세요</strong>
           <p>
             지원 형식은 {supportedImageTypesText}입니다. 붙여넣기 이미지는 이
-            페이지에서 <kbd>Ctrl</kbd> + <kbd>V</kbd> 로 바로 추가할 수
-            있습니다.
+            페이지에서 <kbd>Ctrl</kbd> + <kbd>V</kbd> 로 바로 추가할 수 있습니다.
           </p>
           <div className="tool-shell__drop-actions">
             <button className="button-link" onClick={openFilePicker} type="button">
@@ -1266,9 +1029,9 @@ export function ToolShell({
             </button>
             <button
               className="button-muted"
+              disabled={items.length === 0 || isProcessing}
               onClick={clearItems}
               type="button"
-              disabled={items.length === 0}
             >
               업로드 초기화
             </button>
@@ -1276,17 +1039,7 @@ export function ToolShell({
           <ul className="chip-list">
             <li>브라우저 안에서만 파일 보관 및 처리</li>
             <li>JPEG, PNG, WebP 파일만 허용</li>
-            <li>
-              {isCompressTool
-                ? "현재 압축 도구는 단일 파일 작업만 지원"
-                : isResizeTool
-                  ? "현재 크기 조절 도구는 단일 파일 작업만 지원"
-                  : isConvertTool
-                    ? "현재 포맷 변환 도구는 단일 파일 작업만 지원"
-                    : isRemoveExifTool
-                      ? "현재 EXIF 제거 도구는 단일 파일 작업만 지원"
-                      : "이후 도구 페이지에서도 같은 업로드 상태 재사용 가능"}
-            </li>
+            <li>{getDropzoneCopy(variant, keepAspectRatio, skippedConvertCount)}</li>
           </ul>
         </div>
 
@@ -1308,15 +1061,15 @@ export function ToolShell({
 
         {processingError ? (
           <div className="tool-shell__message" role="alert">
-            <strong>{processingErrorTitle}</strong>
+            <strong>처리를 진행할 수 없습니다</strong>
             <p>{processingError}</p>
           </div>
         ) : null}
 
-        {hasTooManyFiles ? (
-          <div className="tool-shell__message" role="alert">
-            <strong>단일 파일만 남겨 주세요</strong>
-            <p>{singleFileLimitMessage}</p>
+        {processingNote ? (
+          <div className="tool-shell__message">
+            <strong>처리 엔진 안내</strong>
+            <p>{processingNote}</p>
           </div>
         ) : null}
 
@@ -1333,44 +1086,174 @@ export function ToolShell({
             <h3>최근 추가 방법</h3>
             <p>{lastSource ? sourceLabels[lastSource] : "아직 없음"}</p>
           </div>
+          <div className="card">
+            <h3>성공 / 실패</h3>
+            <p>
+              {items.length > 0
+                ? `${successCount}개 성공 · ${errorCount}개 실패`
+                : "실행 전"}
+            </p>
+          </div>
+          <div className="card">
+            <h3>처리 엔진</h3>
+            <p>{getEngineLabel(processingEngine)}</p>
+          </div>
         </div>
+
+        {toolVariant ? (
+          <div className="tool-shell__progress">
+            <div className="tool-shell__progress-header">
+              <strong>배치 진행률</strong>
+              <span>
+                {items.length > 0
+                  ? `${completedCount}/${items.length} 완료`
+                  : "실행 대기"}
+              </span>
+            </div>
+            <div aria-hidden="true" className="tool-shell__progress-bar">
+              <span style={{ width: `${progressPercent}%` }} />
+            </div>
+            <p className="tool-shell__helper">
+              {processingCount > 0
+                ? `${processingCount}개 파일을 현재 처리 중입니다. 성공한 파일만 ZIP에 묶어 다운로드할 수 있습니다.`
+                : hasResults
+                  ? `부분 실패가 있어도 성공한 파일은 바로 개별 다운로드하거나 ZIP으로 한 번에 받을 수 있습니다.`
+                  : `배치 실행 전에는 파일별 상태가 대기 중으로 유지됩니다.`}
+            </p>
+          </div>
+        ) : null}
 
         {items.length > 0 ? (
           <div className="detail-grid tool-shell__preview-grid">
-            {items.map((item) => (
-              <article className="card tool-shell__preview-card" key={item.id}>
-                <div className="tool-shell__preview-media">
-                  <Image
-                    alt={`${item.file.name} 미리보기`}
-                    fill
-                    sizes="(min-width: 900px) 30vw, (min-width: 640px) 45vw, 100vw"
-                    src={item.previewUrl}
-                    unoptimized
-                  />
-                </div>
-                <div className="tool-shell__preview-meta">
-                  <h3>{item.file.name}</h3>
-                  <p>{item.typeLabel}</p>
-                  <p>{formatFileSize(item.file.size)}</p>
-                </div>
-                <div className="tool-shell__preview-actions">
-                  <button
-                    className="button-muted"
-                    onClick={() => removeItem(item.id)}
-                    type="button"
-                  >
-                    목록에서 제거
-                  </button>
-                </div>
-              </article>
-            ))}
+            {items.map((item) => {
+              const itemState = queueState[item.id] ?? { status: "queued" };
+              const itemMimeType =
+                getSupportedImageMimeType(item.file) ?? "image/jpeg";
+
+              return (
+                <article className="card tool-shell__preview-card" key={item.id}>
+                  <div className="tool-shell__preview-media">
+                    <Image
+                      alt={`${item.file.name} 미리보기`}
+                      fill
+                      sizes="(min-width: 900px) 30vw, (min-width: 640px) 45vw, 100vw"
+                      src={item.previewUrl}
+                      unoptimized
+                    />
+                  </div>
+                  <div className="tool-shell__preview-meta">
+                    <div className="tool-shell__preview-heading">
+                      <h3>{item.file.name}</h3>
+                      <span
+                        className="tool-shell__queue-status"
+                        data-status={itemState.status}
+                      >
+                        {getQueueStatusLabel(itemState.status)}
+                      </span>
+                    </div>
+                    <p>{item.typeLabel}</p>
+                    <p>{formatFileSize(item.file.size)}</p>
+                  </div>
+
+                  {itemState.status === "processing" ? (
+                    <p className="tool-shell__helper">
+                      현재 파일을 처리하고 있습니다. 이 단계가 끝나면 성공 또는 실패
+                      상태가 바로 업데이트됩니다.
+                    </p>
+                  ) : null}
+
+                  {itemState.status === "error" ? (
+                    <p className="tool-shell__helper tool-shell__helper--error">
+                      {itemState.errorMessage}
+                    </p>
+                  ) : null}
+
+                  {itemState.status === "success" && itemState.result ? (
+                    <dl className="tool-shell__stat-list tool-shell__queue-result">
+                      <div>
+                        <dt>저장 이름</dt>
+                        <dd>{itemState.result.fileName}</dd>
+                      </div>
+                      <div>
+                        <dt>출력 형식</dt>
+                        <dd>{getCompressionMimeTypeLabel(itemState.result.mimeType)}</dd>
+                      </div>
+                      <div>
+                        <dt>결과 크기</dt>
+                        <dd>{formatFileSize(itemState.result.blob.size)}</dd>
+                      </div>
+                      <div>
+                        <dt>해상도</dt>
+                        <dd>{formatDimensions(itemState.result)}</dd>
+                      </div>
+                      {toolVariant === "resize" ? (
+                        <div>
+                          <dt>크기 비율</dt>
+                          <dd>
+                            {formatResizeScaleSummary(
+                              {
+                                width: itemState.result.originalWidth,
+                                height: itemState.result.originalHeight,
+                              },
+                              itemState.result,
+                            )}
+                          </dd>
+                        </div>
+                      ) : (
+                        <div>
+                          <dt>용량 변화</dt>
+                          <dd>
+                            {formatCompressionSummary(
+                              item.file.size,
+                              itemState.result.blob.size,
+                            )}
+                          </dd>
+                        </div>
+                      )}
+                      {toolVariant === "removeExif" ? (
+                        <div>
+                          <dt>메타데이터</dt>
+                          <dd>EXIF 제거용 재저장</dd>
+                        </div>
+                      ) : null}
+                      {toolVariant === "convert" ? (
+                        <div>
+                          <dt>원본 형식</dt>
+                          <dd>{getCompressionMimeTypeLabel(itemMimeType)}</dd>
+                        </div>
+                      ) : null}
+                    </dl>
+                  ) : null}
+
+                  <div className="tool-shell__preview-actions">
+                    <button
+                      className="button-muted"
+                      disabled={isProcessing}
+                      onClick={() => removeItem(item.id)}
+                      type="button"
+                    >
+                      목록에서 제거
+                    </button>
+                    <button
+                      className="button-link"
+                      disabled={itemState.status !== "success"}
+                      onClick={() => handleDownloadResult(item.id)}
+                      type="button"
+                    >
+                      결과 다운로드
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         ) : (
           <div className="tool-shell__empty">
-            <strong>미리보기는 업로드 후 여기에 표시됩니다.</strong>
+            <strong>미리보기와 큐 상태는 업로드 후 여기에 표시됩니다.</strong>
             <p>
-              아직 파일이 없습니다. {supportedImageTypesText} 이미지를 추가하면
-              각 파일 카드에서 형식과 용량을 바로 확인할 수 있습니다.
+              아직 파일이 없습니다. {supportedImageTypesText} 이미지를 여러 개
+              추가하면 각 카드에서 원본 정보와 배치 처리 상태를 바로 확인할 수
+              있습니다.
             </p>
           </div>
         )}
@@ -1384,10 +1267,9 @@ export function ToolShell({
                 <span>출력 형식</span>
                 <select
                   className="tool-shell__select"
+                  disabled={isProcessing}
                   id="compress-output-format"
-                  onChange={(event) =>
-                    setOutputFormat(event.currentTarget.value as CompressionOutputFormat)
-                  }
+                  onChange={handleCompressOutputChange}
                   value={outputFormat}
                 >
                   {compressionOutputOptions.map((option) => (
@@ -1411,31 +1293,30 @@ export function ToolShell({
                 <span>품질</span>
                 <div className="tool-shell__range-row">
                   <input
+                    disabled={!isQualityEnabled || isProcessing}
                     id="compress-quality"
                     max="100"
                     min="40"
-                    onChange={(event) => setQuality(Number(event.currentTarget.value))}
+                    onChange={handleQualityChange}
                     step="1"
                     type="range"
                     value={quality}
-                    disabled={!isQualityEnabled}
                   />
                   <strong>{isQualityEnabled ? `${quality}%` : "무손실"}</strong>
                 </div>
               </label>
 
               <p className="tool-shell__helper">
-                {isQualityEnabled
-                  ? "값이 낮을수록 파일은 더 작아질 수 있지만, 세부 묘사가 줄어들 수 있습니다."
-                  : "PNG로 저장하면 품질 슬라이더 대신 원본 해상도 그대로 무손실 재저장이 적용됩니다."}
+                같은 품질과 출력 형식이 현재 큐 전체에 한 번에 적용됩니다. 성공한
+                파일만 ZIP으로 함께 내려받을 수 있습니다.
               </p>
             </section>
 
             <section className="card">
-              <h3>원본 정보</h3>
+              <h3>대표 원본 정보</h3>
               <dl className="tool-shell__stat-list">
                 <div>
-                  <dt>파일명</dt>
+                  <dt>기준 파일</dt>
                   <dd>{selectedItem.file.name}</dd>
                 </div>
                 <div>
@@ -1452,15 +1333,15 @@ export function ToolShell({
                 </div>
                 <div>
                   <dt>해상도</dt>
-                  <dd>{sourceDimensions ? formatDimensions(sourceDimensions) : "읽는 중"}</dd>
+                  <dd>
+                    {referenceDimensions
+                      ? formatDimensions(referenceDimensions)
+                      : "읽는 중"}
+                  </dd>
                 </div>
                 <div>
-                  <dt>저장 이름</dt>
-                  <dd>
-                    {targetMimeType
-                      ? createCompressedFileName(selectedItem.file.name, targetMimeType)
-                      : "형식 확인 필요"}
-                  </dd>
+                  <dt>예상 저장 이름</dt>
+                  <dd>{previewPlan ? previewPlan.fileName : "형식 확인 필요"}</dd>
                 </div>
               </dl>
             </section>
@@ -1477,6 +1358,7 @@ export function ToolShell({
                   <span>가로 (px)</span>
                   <input
                     className="tool-shell__input"
+                    disabled={isProcessing}
                     id="resize-width"
                     inputMode="numeric"
                     min="1"
@@ -1490,6 +1372,7 @@ export function ToolShell({
                   <span>세로 (px)</span>
                   <input
                     className="tool-shell__input"
+                    disabled={isProcessing}
                     id="resize-height"
                     inputMode="numeric"
                     min="1"
@@ -1503,6 +1386,7 @@ export function ToolShell({
               <label className="tool-shell__toggle" htmlFor="resize-keep-aspect-ratio">
                 <input
                   checked={keepAspectRatio}
+                  disabled={isProcessing}
                   id="resize-keep-aspect-ratio"
                   onChange={handleKeepAspectRatioChange}
                   type="checkbox"
@@ -1510,8 +1394,8 @@ export function ToolShell({
                 <span>
                   <strong>비율 유지</strong>
                   <small>
-                    켜져 있으면 한쪽 값을 바꿀 때 원본 비율에 맞춰 다른 쪽 값을
-                    자동 계산합니다.
+                    켜져 있으면 각 파일이 지정한 가로·세로 박스 안에 맞게 개별
+                    비율을 유지합니다.
                   </small>
                 </span>
               </label>
@@ -1521,13 +1405,14 @@ export function ToolShell({
                 <div className="tool-shell__preset-list">
                   {resizePresetOptions.map((preset) => {
                     const nextDimensions =
-                      keepAspectRatio && sourceDimensions
-                        ? fitWithinResizePreset(sourceDimensions, preset)
+                      keepAspectRatio && referenceDimensions
+                        ? fitWithinResizePreset(referenceDimensions, preset)
                         : preset;
 
                     return (
                       <button
                         className="tool-shell__preset"
+                        disabled={isProcessing}
                         key={preset.label}
                         onClick={() => applyResizePreset(preset)}
                         type="button"
@@ -1541,9 +1426,8 @@ export function ToolShell({
               </div>
 
               <p className="tool-shell__helper">
-                {keepAspectRatio
-                  ? "비율 잠금이 켜져 있으면 프리셋 박스 안에 맞도록 원본 비율을 유지해 자동 계산합니다."
-                  : "비율 잠금이 꺼져 있으면 프리셋의 가로와 세로 값을 그대로 적용합니다."}
+                같은 입력값을 큐 전체에 적용하지만, 비율 유지가 켜져 있으면 각
+                파일의 원본 비율에 맞춰 개별 결과 크기가 달라질 수 있습니다.
               </p>
 
               {resizeValidationMessage ? (
@@ -1554,10 +1438,10 @@ export function ToolShell({
             </section>
 
             <section className="card">
-              <h3>원본 정보</h3>
+              <h3>대표 원본 정보</h3>
               <dl className="tool-shell__stat-list">
                 <div>
-                  <dt>파일명</dt>
+                  <dt>기준 파일</dt>
                   <dd>{selectedItem.file.name}</dd>
                 </div>
                 <div>
@@ -1569,59 +1453,24 @@ export function ToolShell({
                   </dd>
                 </div>
                 <div>
-                  <dt>파일 크기</dt>
-                  <dd>{formatFileSize(selectedItem.file.size)}</dd>
-                </div>
-                <div>
                   <dt>원본 해상도</dt>
-                  <dd>{sourceDimensions ? formatDimensions(sourceDimensions) : "읽는 중"}</dd>
+                  <dd>
+                    {referenceDimensions
+                      ? formatDimensions(referenceDimensions)
+                      : "읽는 중"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>예상 출력</dt>
+                  <dd>
+                    {previewPlan ? formatDimensions(previewPlan) : "입력 확인 필요"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>예상 저장 이름</dt>
+                  <dd>{previewPlan ? previewPlan.fileName : "입력 확인 필요"}</dd>
                 </div>
               </dl>
-            </section>
-
-            <section className="card">
-              <h3>예상 출력</h3>
-              <dl className="tool-shell__stat-list">
-                <div>
-                  <dt>출력 형식</dt>
-                  <dd>
-                    {selectedMimeType
-                      ? getCompressionMimeTypeLabel(selectedMimeType)
-                      : "형식 확인 필요"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>출력 해상도</dt>
-                  <dd>
-                    {resizeTargetDimensions
-                      ? formatDimensions(resizeTargetDimensions)
-                      : "입력 확인 필요"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>크기 비율</dt>
-                  <dd>
-                    {sourceDimensions && resizeTargetDimensions
-                      ? formatResizeScaleSummary(
-                          sourceDimensions,
-                          resizeTargetDimensions,
-                        )
-                      : "입력 확인 필요"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>저장 이름</dt>
-                  <dd>
-                    {selectedMimeType
-                      ? createResizedFileName(selectedItem.file.name, selectedMimeType)
-                      : "형식 확인 필요"}
-                  </dd>
-                </div>
-              </dl>
-              <p className="tool-shell__helper">
-                리사이즈 결과는 원본 형식을 유지하며, 결과 파일명에는
-                `-resized`가 붙습니다.
-              </p>
             </section>
           </div>
         ) : null}
@@ -1635,34 +1484,28 @@ export function ToolShell({
                 <span>출력 형식</span>
                 <select
                   className="tool-shell__select"
+                  disabled={isProcessing}
                   id="convert-output-format"
                   onChange={handleConversionOutputChange}
                   value={conversionOutputFormat}
                 >
                   {conversionOutputOptions.map((option) => (
-                    <option
-                      key={option.value}
-                      value={option.value}
-                      disabled={option.value === selectedMimeType}
-                    >
-                      {option.value === selectedMimeType
-                        ? `${option.label} (원본과 동일)`
-                        : option.label}
+                    <option key={option.value} value={option.value}>
+                      {option.label}
                     </option>
                   ))}
                 </select>
               </label>
 
               <p className="tool-shell__helper">
-                {conversionTargetMimeType
-                  ? getConversionOutputDescription(conversionTargetMimeType)
-                  : "출력 형식을 선택해 변환 결과를 저장합니다."}
+                {getConversionOutputDescription(conversionOutputFormat)}
               </p>
 
               <label className="tool-shell__field" htmlFor="convert-quality">
                 <span>품질</span>
                 <div className="tool-shell__range-row">
                   <input
+                    disabled={!isConvertQualityEnabled || isProcessing}
                     id="convert-quality"
                     max="100"
                     min="40"
@@ -1670,28 +1513,34 @@ export function ToolShell({
                     step="1"
                     type="range"
                     value={quality}
-                    disabled={!isConvertQualityEnabled}
                   />
-                  <strong>{isConvertQualityEnabled ? `${quality}%` : "무손실"}</strong>
+                  <strong>
+                    {isConvertQualityEnabled ? `${quality}%` : "무손실"}
+                  </strong>
                 </div>
               </label>
 
               <p className="tool-shell__helper">
-                {conversionTargetMimeType === "image/jpeg" &&
-                selectedMimeType &&
-                selectedMimeType !== "image/jpeg"
+                {conversionOutputFormat === "image/jpeg" && selectedMimeType !== "image/jpeg"
                   ? "JPEG는 투명 배경을 저장하지 못하므로 투명 영역이 있다면 흰색으로 채워집니다."
                   : isConvertQualityEnabled
                     ? "JPEG와 WebP는 품질 값을 낮출수록 파일이 더 작아질 수 있지만 세부 묘사가 줄어들 수 있습니다."
-                    : "PNG는 품질 슬라이더 대신 원본 해상도를 유지한 무손실 저장이 적용됩니다."}
+                    : "PNG는 무손실 저장으로 다시 생성됩니다."}
               </p>
+
+              {skippedConvertCount > 0 ? (
+                <p className="tool-shell__helper">
+                  현재 큐에서 {skippedConvertCount}개 파일은 원본과 같은 출력 형식을
+                  선택해 변환 시 실패로 표시될 예정입니다.
+                </p>
+              ) : null}
             </section>
 
             <section className="card">
-              <h3>원본 정보</h3>
+              <h3>대표 원본 정보</h3>
               <dl className="tool-shell__stat-list">
                 <div>
-                  <dt>파일명</dt>
+                  <dt>기준 파일</dt>
                   <dd>{selectedItem.file.name}</dd>
                 </div>
                 <div>
@@ -1703,53 +1552,20 @@ export function ToolShell({
                   </dd>
                 </div>
                 <div>
-                  <dt>파일 크기</dt>
-                  <dd>{formatFileSize(selectedItem.file.size)}</dd>
-                </div>
-                <div>
                   <dt>해상도</dt>
-                  <dd>{sourceDimensions ? formatDimensions(sourceDimensions) : "읽는 중"}</dd>
+                  <dd>
+                    {referenceDimensions
+                      ? formatDimensions(referenceDimensions)
+                      : "읽는 중"}
+                  </dd>
                 </div>
-              </dl>
-            </section>
-
-            <section className="card">
-              <h3>예상 출력</h3>
-              <dl className="tool-shell__stat-list">
                 <div>
                   <dt>출력 형식</dt>
-                  <dd>
-                    {conversionTargetMimeType
-                      ? getCompressionMimeTypeLabel(conversionTargetMimeType)
-                      : "형식 확인 필요"}
-                  </dd>
+                  <dd>{getCompressionMimeTypeLabel(conversionOutputFormat)}</dd>
                 </div>
                 <div>
-                  <dt>형식 특징</dt>
-                  <dd>
-                    {conversionTargetMimeType
-                      ? getConversionOutputDescription(conversionTargetMimeType)
-                      : "형식 확인 필요"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>품질 설정</dt>
-                  <dd>{isConvertQualityEnabled ? `${quality}%` : "무손실"}</dd>
-                </div>
-                <div>
-                  <dt>해상도</dt>
-                  <dd>{sourceDimensions ? formatDimensions(sourceDimensions) : "읽는 중"}</dd>
-                </div>
-                <div>
-                  <dt>저장 이름</dt>
-                  <dd>
-                    {conversionTargetMimeType
-                      ? createConvertedFileName(
-                          selectedItem.file.name,
-                          conversionTargetMimeType,
-                        )
-                      : "형식 확인 필요"}
-                  </dd>
+                  <dt>예상 저장 이름</dt>
+                  <dd>{previewPlan ? previewPlan.fileName : "일부 파일은 실패 가능"}</dd>
                 </div>
               </dl>
             </section>
@@ -1761,25 +1577,25 @@ export function ToolShell({
             <section className="card tool-shell__option-card">
               <h3>메타데이터 제거 안내</h3>
               <p>
-                이 도구는 이미지를 같은 형식으로 다시 저장해 공유 전에 위치,
-                기기, 촬영 시각 같은 EXIF 메타데이터 노출 가능성을 줄입니다.
+                이 도구는 큐 안의 이미지를 같은 형식으로 다시 저장해 공유 전에
+                위치, 기기, 촬영 시각 같은 EXIF 메타데이터 노출 가능성을 줄입니다.
               </p>
               <ul className="chip-list">
                 <li>GPS 위치 정보 제거 가능</li>
                 <li>기기 모델 및 촬영 설정 제거 가능</li>
-                <li>현재 브라우저 탭 안에서만 로컬 처리</li>
+                <li>성공한 파일만 ZIP으로 함께 저장</li>
               </ul>
               <p className="tool-shell__helper">
-                결과 파일은 원본과 같은 형식으로 다시 저장하며, 다운로드용
-                파일명에는 `-no-exif`가 붙습니다.
+                처리 방식은 재인코딩 기반이므로 일부 앱 전용 메타데이터도 함께
+                사라질 수 있습니다.
               </p>
             </section>
 
             <section className="card">
-              <h3>원본 정보</h3>
+              <h3>대표 원본 정보</h3>
               <dl className="tool-shell__stat-list">
                 <div>
-                  <dt>파일명</dt>
+                  <dt>기준 파일</dt>
                   <dd>{selectedItem.file.name}</dd>
                 </div>
                 <div>
@@ -1791,342 +1607,22 @@ export function ToolShell({
                   </dd>
                 </div>
                 <div>
-                  <dt>파일 크기</dt>
-                  <dd>{formatFileSize(selectedItem.file.size)}</dd>
-                </div>
-                <div>
                   <dt>해상도</dt>
-                  <dd>{sourceDimensions ? formatDimensions(sourceDimensions) : "읽는 중"}</dd>
+                  <dd>
+                    {referenceDimensions
+                      ? formatDimensions(referenceDimensions)
+                      : "읽는 중"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>예상 저장 이름</dt>
+                  <dd>{previewPlan ? previewPlan.fileName : "형식 확인 필요"}</dd>
+                </div>
+                <div>
+                  <dt>배치 범위</dt>
+                  <dd>{items.length}개 파일에 동일한 재저장 흐름 적용</dd>
                 </div>
               </dl>
-            </section>
-
-            <section className="card">
-              <h3>예상 출력</h3>
-              <dl className="tool-shell__stat-list">
-                <div>
-                  <dt>출력 형식</dt>
-                  <dd>
-                    {selectedMimeType
-                      ? getCompressionMimeTypeLabel(selectedMimeType)
-                      : "형식 확인 필요"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>메타데이터</dt>
-                  <dd>위치, 기기, 촬영 시각 같은 EXIF 제거용 재저장</dd>
-                </div>
-                <div>
-                  <dt>해상도</dt>
-                  <dd>{sourceDimensions ? formatDimensions(sourceDimensions) : "읽는 중"}</dd>
-                </div>
-                <div>
-                  <dt>저장 이름</dt>
-                  <dd>
-                    {selectedMimeType
-                      ? createExifRemovedFileName(
-                          selectedItem.file.name,
-                          selectedMimeType,
-                        )
-                      : "형식 확인 필요"}
-                  </dd>
-                </div>
-              </dl>
-            </section>
-          </div>
-        ) : null}
-
-        {isCompressTool && compressionResult && selectedItem ? (
-          <div className="detail-grid tool-shell__comparison-grid">
-            <article className="card tool-shell__preview-card">
-              <div className="tool-shell__preview-media">
-                <Image
-                  alt={`${compressionResult.fileName} 미리보기`}
-                  fill
-                  sizes="(min-width: 900px) 30vw, (min-width: 640px) 45vw, 100vw"
-                  src={compressionResult.previewUrl}
-                  unoptimized
-                />
-              </div>
-              <div className="tool-shell__preview-meta">
-                <h3>{compressionResult.fileName}</h3>
-                <p>{getCompressionMimeTypeLabel(compressionResult.mimeType)}</p>
-                <p>{formatFileSize(compressionResult.blob.size)}</p>
-              </div>
-            </article>
-
-            <section className="card">
-              <h3>압축 결과</h3>
-              <dl className="tool-shell__stat-list">
-                <div>
-                  <dt>압축 전</dt>
-                  <dd>{formatFileSize(selectedItem.file.size)}</dd>
-                </div>
-                <div>
-                  <dt>압축 후</dt>
-                  <dd>{formatFileSize(compressionResult.blob.size)}</dd>
-                </div>
-                <div>
-                  <dt>용량 변화</dt>
-                  <dd>
-                    {formatCompressionSummary(
-                      selectedItem.file.size,
-                      compressionResult.blob.size,
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt>출력 형식</dt>
-                  <dd>{getCompressionMimeTypeLabel(compressionResult.mimeType)}</dd>
-                </div>
-                <div>
-                  <dt>해상도</dt>
-                  <dd>{formatDimensions(compressionResult)}</dd>
-                </div>
-              </dl>
-
-              {isCompressionResultStale ? (
-                <p className="tool-shell__helper">
-                  옵션이 변경되어 현재 결과는 이전 설정 기준입니다. 최신 설정으로
-                  덮어쓰려면 다시 압축해 주세요.
-                </p>
-              ) : (
-                <p className="tool-shell__helper">
-                  결과 파일은 현재 브라우저 메모리에만 존재하며, 다운로드하지 않으면
-                  서버로 전송되지 않습니다.
-                </p>
-              )}
-            </section>
-          </div>
-        ) : null}
-
-        {isResizeTool && resizeResult && selectedItem ? (
-          <div className="detail-grid tool-shell__comparison-grid">
-            <article className="card tool-shell__preview-card">
-              <div className="tool-shell__preview-media">
-                <Image
-                  alt={`${resizeResult.fileName} 미리보기`}
-                  fill
-                  sizes="(min-width: 900px) 30vw, (min-width: 640px) 45vw, 100vw"
-                  src={resizeResult.previewUrl}
-                  unoptimized
-                />
-              </div>
-              <div className="tool-shell__preview-meta">
-                <h3>{resizeResult.fileName}</h3>
-                <p>{getCompressionMimeTypeLabel(resizeResult.mimeType)}</p>
-                <p>{formatFileSize(resizeResult.blob.size)}</p>
-              </div>
-            </article>
-
-            <section className="card">
-              <h3>크기 조절 결과</h3>
-              <dl className="tool-shell__stat-list">
-                <div>
-                  <dt>원본 해상도</dt>
-                  <dd>{sourceDimensions ? formatDimensions(sourceDimensions) : "확인 불가"}</dd>
-                </div>
-                <div>
-                  <dt>결과 해상도</dt>
-                  <dd>{formatDimensions(resizeResult)}</dd>
-                </div>
-                <div>
-                  <dt>크기 비율</dt>
-                  <dd>
-                    {sourceDimensions
-                      ? formatResizeScaleSummary(sourceDimensions, resizeResult)
-                      : "확인 불가"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>원본 크기</dt>
-                  <dd>{formatFileSize(selectedItem.file.size)}</dd>
-                </div>
-                <div>
-                  <dt>결과 크기</dt>
-                  <dd>{formatFileSize(resizeResult.blob.size)}</dd>
-                </div>
-                <div>
-                  <dt>출력 형식</dt>
-                  <dd>{getCompressionMimeTypeLabel(resizeResult.mimeType)}</dd>
-                </div>
-                <div>
-                  <dt>저장 이름</dt>
-                  <dd>{resizeResult.fileName}</dd>
-                </div>
-              </dl>
-
-              {isResizeResultStale ? (
-                <p className="tool-shell__helper">
-                  입력 값이 변경되어 현재 결과는 이전 설정 기준입니다. 최신 설정으로
-                  다시 저장하려면 크기 조절을 한 번 더 실행해 주세요.
-                </p>
-              ) : (
-                <p className="tool-shell__helper">
-                  결과 파일은 현재 브라우저 메모리에만 존재하며, 다운로드하지 않으면
-                  서버로 전송되지 않습니다.
-                </p>
-              )}
-            </section>
-          </div>
-        ) : null}
-
-        {isConvertTool && convertResult && selectedItem ? (
-          <div className="detail-grid tool-shell__comparison-grid">
-            <article className="card tool-shell__preview-card">
-              <div className="tool-shell__preview-media">
-                <Image
-                  alt={`${convertResult.fileName} 미리보기`}
-                  fill
-                  sizes="(min-width: 900px) 30vw, (min-width: 640px) 45vw, 100vw"
-                  src={convertResult.previewUrl}
-                  unoptimized
-                />
-              </div>
-              <div className="tool-shell__preview-meta">
-                <h3>{convertResult.fileName}</h3>
-                <p>{getCompressionMimeTypeLabel(convertResult.mimeType)}</p>
-                <p>{formatFileSize(convertResult.blob.size)}</p>
-              </div>
-            </article>
-
-            <section className="card">
-              <h3>포맷 변환 결과</h3>
-              <dl className="tool-shell__stat-list">
-                <div>
-                  <dt>변환 전 형식</dt>
-                  <dd>
-                    {selectedMimeType
-                      ? getCompressionMimeTypeLabel(selectedMimeType)
-                      : "확인 불가"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>변환 후 형식</dt>
-                  <dd>{getCompressionMimeTypeLabel(convertResult.mimeType)}</dd>
-                </div>
-                <div>
-                  <dt>원본 크기</dt>
-                  <dd>{formatFileSize(selectedItem.file.size)}</dd>
-                </div>
-                <div>
-                  <dt>결과 크기</dt>
-                  <dd>{formatFileSize(convertResult.blob.size)}</dd>
-                </div>
-                <div>
-                  <dt>용량 변화</dt>
-                  <dd>
-                    {formatCompressionSummary(
-                      selectedItem.file.size,
-                      convertResult.blob.size,
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt>해상도</dt>
-                  <dd>{formatDimensions(convertResult)}</dd>
-                </div>
-                <div>
-                  <dt>품질 설정</dt>
-                  <dd>
-                    {isQualityAdjustableFormat(convertResult.mimeType)
-                      ? `${convertResult.quality}%`
-                      : "무손실"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>저장 이름</dt>
-                  <dd>{convertResult.fileName}</dd>
-                </div>
-              </dl>
-
-              {isConvertResultStale ? (
-                <p className="tool-shell__helper">
-                  옵션이 변경되어 현재 결과는 이전 설정 기준입니다. 최신 설정으로
-                  다시 저장하려면 포맷 변환을 한 번 더 실행해 주세요.
-                </p>
-              ) : (
-                <p className="tool-shell__helper">
-                  결과 파일은 현재 브라우저 메모리에만 존재하며, 다운로드하지 않으면
-                  서버로 전송되지 않습니다.
-                </p>
-              )}
-            </section>
-          </div>
-        ) : null}
-
-        {isRemoveExifTool && removeExifResult && selectedItem ? (
-          <div className="detail-grid tool-shell__comparison-grid">
-            <article className="card tool-shell__preview-card">
-              <div className="tool-shell__preview-media">
-                <Image
-                  alt={`${removeExifResult.fileName} 미리보기`}
-                  fill
-                  sizes="(min-width: 900px) 30vw, (min-width: 640px) 45vw, 100vw"
-                  src={removeExifResult.previewUrl}
-                  unoptimized
-                />
-              </div>
-              <div className="tool-shell__preview-meta">
-                <h3>{removeExifResult.fileName}</h3>
-                <p>{getCompressionMimeTypeLabel(removeExifResult.mimeType)}</p>
-                <p>{formatFileSize(removeExifResult.blob.size)}</p>
-              </div>
-            </article>
-
-            <section className="card">
-              <h3>EXIF 제거 결과</h3>
-              <dl className="tool-shell__stat-list">
-                <div>
-                  <dt>원본 파일명</dt>
-                  <dd>{selectedItem.file.name}</dd>
-                </div>
-                <div>
-                  <dt>결과 파일명</dt>
-                  <dd>{removeExifResult.fileName}</dd>
-                </div>
-                <div>
-                  <dt>원본 크기</dt>
-                  <dd>{formatFileSize(selectedItem.file.size)}</dd>
-                </div>
-                <div>
-                  <dt>결과 크기</dt>
-                  <dd>{formatFileSize(removeExifResult.blob.size)}</dd>
-                </div>
-                <div>
-                  <dt>용량 변화</dt>
-                  <dd>
-                    {formatCompressionSummary(
-                      selectedItem.file.size,
-                      removeExifResult.blob.size,
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt>출력 형식</dt>
-                  <dd>{getCompressionMimeTypeLabel(removeExifResult.mimeType)}</dd>
-                </div>
-                <div>
-                  <dt>해상도</dt>
-                  <dd>{formatDimensions(removeExifResult)}</dd>
-                </div>
-                <div>
-                  <dt>메타데이터 처리</dt>
-                  <dd>위치, 기기, 촬영 시각 같은 EXIF 제거용 재저장</dd>
-                </div>
-              </dl>
-
-              {isRemoveExifResultStale ? (
-                <p className="tool-shell__helper">
-                  원본 이미지가 변경되어 현재 결과는 이전 파일 기준입니다. 최신
-                  파일로 다시 저장하려면 EXIF 제거를 한 번 더 실행해 주세요.
-                </p>
-              ) : (
-                <p className="tool-shell__helper">
-                  결과 파일은 현재 브라우저 메모리에만 존재하며, 다운로드하지
-                  않으면 서버로 전송되지 않습니다.
-                </p>
-              )}
             </section>
           </div>
         ) : null}
@@ -2156,88 +1652,31 @@ export function ToolShell({
       </div>
 
       <div className="tool-shell__actions">
-        {isCompressTool ? (
+        {toolVariant ? (
           <>
             <button
               className="button-link"
+              disabled={!canProcess}
+              onClick={handleProcessAll}
               type="button"
-              disabled={!selectedItem || hasTooManyFiles || isProcessing}
-              onClick={handleCompress}
             >
-              {isProcessing ? "압축 중..." : primaryActionLabel}
+              {isProcessing ? "배치 처리 중..." : primaryActionLabel}
             </button>
             <button
               className="button-muted"
+              disabled={!canDownloadZip}
+              onClick={handleDownloadZip}
               type="button"
-              disabled={!compressionResult}
-              onClick={handleDownloadCompressionResult}
             >
-              결과 다운로드
-            </button>
-          </>
-        ) : isResizeTool ? (
-          <>
-            <button
-              className="button-link"
-              type="button"
-              disabled={!selectedItem || hasTooManyFiles || isProcessing}
-              onClick={handleResize}
-            >
-              {isProcessing ? "크기 조절 중..." : primaryActionLabel}
-            </button>
-            <button
-              className="button-muted"
-              type="button"
-              disabled={!resizeResult}
-              onClick={handleDownloadResizeResult}
-            >
-              결과 다운로드
-            </button>
-          </>
-        ) : isConvertTool ? (
-          <>
-            <button
-              className="button-link"
-              type="button"
-              disabled={!selectedItem || hasTooManyFiles || isProcessing}
-              onClick={handleConvert}
-            >
-              {isProcessing ? "변환 중..." : primaryActionLabel}
-            </button>
-            <button
-              className="button-muted"
-              type="button"
-              disabled={!convertResult}
-              onClick={handleDownloadConvertResult}
-            >
-              결과 다운로드
-            </button>
-          </>
-        ) : isRemoveExifTool ? (
-          <>
-            <button
-              className="button-link"
-              type="button"
-              disabled={!selectedItem || hasTooManyFiles || isProcessing}
-              onClick={handleRemoveExif}
-            >
-              {isProcessing ? "메타데이터 제거 중..." : primaryActionLabel}
-            </button>
-            <button
-              className="button-muted"
-              type="button"
-              disabled={!removeExifResult}
-              onClick={handleDownloadRemoveExifResult}
-            >
-              결과 다운로드
+              {isPreparingZip ? "ZIP 준비 중..." : "성공 파일 ZIP 다운로드"}
             </button>
           </>
         ) : (
           <>
-            <button className="button-link" type="button" disabled>
+            <button className="button-link" disabled type="button">
               {primaryActionLabel}
             </button>
-            <button className="button-muted" type="button" disabled>
+            <button className="button-muted" disabled type="button">
               배치 내보내기 연결 예정
             </button>
           </>
