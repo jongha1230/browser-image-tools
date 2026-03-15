@@ -1,10 +1,10 @@
 # Naver Search Advisor Checklist
 
-네이버 등록은 실제 서비스 도메인 배포 후 진행합니다.
+네이버 등록은 현재 public canonical host가 실제로 노출되는 배포 후 진행합니다.
 
 ## 사이트 등록
 
-- Search Advisor에 실제 운영 도메인 등록
+- Search Advisor에 현재 public canonical host 등록
 - 웹마스터 확인 절차 완료
 - 대표 도메인과 리다이렉트 정책을 먼저 정리
 
@@ -31,3 +31,4 @@
 - 한국어 본문이 너무 짧거나 중복되지 않는지 확인
 - 문의, 개인정보, 소개 페이지 링크가 누락되지 않았는지 확인
 - 네이버 수집 로그와 검색 노출 변화를 배포 후 초기에 자주 확인
+- 나중에 custom domain으로 옮기면 canonical, `robots.txt`, `sitemap.xml`을 새 호스트 기준으로 다시 점검

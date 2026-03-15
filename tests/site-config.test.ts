@@ -128,6 +128,7 @@ describe("site configuration", () => {
 
     expect(siteConfig.hasConfiguredSiteOrigin).toBe(true);
     expect(siteConfig.siteOriginSource).toBe("NEXT_PUBLIC_SITE_URL");
+    expect(siteConfig.allowsVercelAppIndexing).toBe(false);
     expect(siteConfig.usesVercelDefaultHostname).toBe(true);
     expect(siteConfig.isSiteIndexable).toBe(false);
     expect(siteConfig.siteIndexingBlockReason).toBe("vercel-hostname");
@@ -154,6 +155,64 @@ describe("site configuration", () => {
     } as never);
 
     expect(proxyResponse.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+  });
+
+  it("allows the production vercel hostname to become the temporary canonical host when explicitly enabled", async () => {
+    const { proxy, robots, rss, siteConfig, siteMetadata, sitemap } =
+      await loadSiteModules({
+        NEXT_PUBLIC_SITE_URL: "https://browser-image-tools.vercel.app",
+        SITE_URL: "https://browser-image-tools.vercel.app",
+        ALLOW_VERCEL_APP_INDEXING: "true",
+      });
+
+    expect(siteConfig.siteOrigin).toBe("https://browser-image-tools.vercel.app");
+    expect(siteConfig.siteOriginSource).toBe("SITE_URL");
+    expect(siteConfig.hasConfiguredSiteOrigin).toBe(true);
+    expect(siteConfig.allowsVercelAppIndexing).toBe(true);
+    expect(siteConfig.usesVercelDefaultHostname).toBe(true);
+    expect(siteConfig.isSiteIndexable).toBe(true);
+    expect(siteConfig.siteIndexingBlockReason).toBeNull();
+    expect(siteMetadata.rootMetadata.metadataBase?.toString()).toBe(
+      "https://browser-image-tools.vercel.app/",
+    );
+    expect(siteMetadata.rootMetadata.alternates).toEqual({
+      canonical: "https://browser-image-tools.vercel.app/",
+      types: {
+        "application/rss+xml": "https://browser-image-tools.vercel.app/rss.xml",
+      },
+    });
+    expect(robots()).toEqual({
+      rules: [
+        {
+          userAgent: "*",
+          allow: "/",
+        },
+      ],
+      sitemap: ["https://browser-image-tools.vercel.app/sitemap.xml"],
+      host: "browser-image-tools.vercel.app",
+    });
+    expect(sitemap()[0]?.url).toBe("https://browser-image-tools.vercel.app/");
+
+    const proxyResponse = proxy({
+      url: "https://browser-image-tools.vercel.app/tools/compress-image",
+      headers: new Headers({
+        host: "browser-image-tools.vercel.app",
+      }),
+    } as never);
+
+    expect(proxyResponse.headers.get("x-robots-tag")).toBeNull();
+
+    const rssResponse = await rss();
+    const rssXml = await rssResponse.text();
+
+    expect(rssResponse.status).toBe(200);
+    expect(rssResponse.headers.get("x-robots-tag")).toBeNull();
+    expect(rssXml).toContain(
+      "<link>https://browser-image-tools.vercel.app/guides</link>",
+    );
+    expect(rssXml).toContain(
+      "<atom:link href=\"https://browser-image-tools.vercel.app/rss.xml\" rel=\"self\" type=\"application/rss+xml\" />",
+    );
   });
 
   it("builds production-only canonical redirects once a custom domain is configured", async () => {

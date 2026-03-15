@@ -1,4 +1,5 @@
 const fallbackSiteOrigin = "https://browser-image-tools.example";
+const truthyEnvValues = new Set(["1", "true", "yes", "on"]);
 
 export type SiteOriginSource = "SITE_URL" | "NEXT_PUBLIC_SITE_URL" | "fallback";
 export type SiteIndexingBlockReason = "missing-site-url" | "vercel-hostname" | null;
@@ -8,6 +9,10 @@ type CanonicalRedirectInput = {
   requestHost?: string | null;
   deploymentEnvironment?: string;
 };
+
+function isEnabled(value: string | undefined) {
+  return truthyEnvValues.has(value?.trim().toLowerCase() ?? "");
+}
 
 function normalizeSiteOrigin(value: string | undefined) {
   const trimmedValue = value?.trim();
@@ -66,15 +71,19 @@ export const siteOriginUrl = new URL(siteOrigin);
 export const siteOriginSource: SiteOriginSource =
   configuredSiteOrigin?.source ?? "fallback";
 export const hasConfiguredSiteOrigin = configuredSiteOrigin !== null;
+export const allowsVercelAppIndexing = isEnabled(
+  process.env.ALLOW_VERCEL_APP_INDEXING,
+);
 export const usesVercelDefaultHostname =
   siteOriginUrl.hostname.endsWith(".vercel.app");
 export const isSiteIndexable =
-  hasConfiguredSiteOrigin && !usesVercelDefaultHostname;
+  hasConfiguredSiteOrigin &&
+  (!usesVercelDefaultHostname || allowsVercelAppIndexing);
 export const siteRobotsHeaderValue = isSiteIndexable ? null : "noindex, nofollow";
 export const shouldRedirectToCanonicalHost = isSiteIndexable;
 export const siteIndexingBlockReason: SiteIndexingBlockReason = !hasConfiguredSiteOrigin
   ? "missing-site-url"
-  : usesVercelDefaultHostname
+  : usesVercelDefaultHostname && !allowsVercelAppIndexing
     ? "vercel-hostname"
     : null;
 
