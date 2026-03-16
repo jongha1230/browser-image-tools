@@ -1180,7 +1180,7 @@ export function ToolShell({
             engine = "main";
             setProcessingEngine("main");
             setProcessingNote(
-              "현재 브라우저에서는 백그라운드 작업자를 사용할 수 없어 이번 실행은 메인 스레드에서 이어집니다.",
+              "현재 브라우저에서는 백그라운드 작업자를 사용할 수 없어 이번 실행은 메인 스레드에서 이어집니다. 처리 중에는 탭 반응이 더 느려질 수 있지만 결과 형식과 저장 흐름은 같습니다.",
             );
             result = await processImageFileOnMainThread(
               item.file,
