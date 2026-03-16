@@ -9,8 +9,11 @@ import { createPageMetadata, getPageMetadataEntry } from "@/lib/site-metadata";
 export const metadata: Metadata = createPageMetadata(getPageMetadataEntry("/guides"));
 
 export default function GuidesPage() {
+  const uploadWorkflowGuides = guideRoutes.filter(
+    (guide) => guide.cluster === "cluster-03",
+  );
   const featuredGuides = guideRoutes.filter((guide) => guide.cluster === "cluster-02");
-  const firstWaveGuides = guideRoutes.filter((guide) => guide.cluster === "cluster-01");
+  const foundationGuides = guideRoutes.filter((guide) => guide.cluster === "cluster-01");
 
   return (
     <PageLayout breadcrumbs={[{ href: "/", label: "홈" }, { label: "가이드" }]}>
@@ -33,12 +36,35 @@ export default function GuidesPage() {
       </PageHero>
 
       <PageSection
-        title="새로 추가한 실전 클러스터"
+        title="새로 추가한 업로드 실무 가이드"
         intro={
           <p>
-            블로그 업로드 준비, 상품 썸네일 정리, 반복 저장 화질 저하, PNG 선택
-            실수처럼 두 번째 콘텐츠 묶음에서 더 자주 막히는 질문을 먼저
-            모았습니다.
+            블로그 발행 직전 점검, 상품 리스트 업로드, 상세 캡처 정리, 대량 상품
+            등록 전 정리처럼 실제 업로드 동선에 가까운 문서를 먼저 묶었습니다.
+          </p>
+        }
+      >
+        <div className="card-grid">
+          {uploadWorkflowGuides.map((guide) => (
+            <article className="card" key={guide.slug}>
+              <h3>{guide.title}</h3>
+              <p>{guide.description}</p>
+              <p>주제: {guide.categoryLabel}</p>
+              <p>예상 읽기 시간: {guide.readTime}</p>
+              <Link className="card__link" href={guide.href}>
+                가이드 읽기
+              </Link>
+            </article>
+          ))}
+        </div>
+      </PageSection>
+
+      <PageSection
+        title="기존 사용처 중심 가이드"
+        intro={
+          <p>
+            블로그 업로드 준비, 상품 썸네일 기준, 반복 저장 화질 저하, PNG 선택
+            실수처럼 바로 이어서 참고하기 좋은 실무 문서를 함께 볼 수 있습니다.
           </p>
         }
       >
@@ -58,16 +84,16 @@ export default function GuidesPage() {
       </PageSection>
 
       <PageSection
-        title="이전에 정리한 실전 클러스터"
+        title="기본 흐름 가이드"
         intro={
           <p>
-            작업 순서, 투명 배경 변환, 배치 처리 전 점검처럼 기본 흐름을 먼저
-            잡아 주는 문서도 함께 이어서 볼 수 있습니다.
+            작업 순서, 투명 배경 변환, 배치 처리 전 점검처럼 먼저 기준을 잡아
+            주는 문서도 별도로 모아 두었습니다.
           </p>
         }
       >
         <div className="card-grid">
-          {firstWaveGuides.map((guide) => (
+          {foundationGuides.map((guide) => (
             <article className="card" key={guide.slug}>
               <h3>{guide.title}</h3>
               <p>{guide.description}</p>
