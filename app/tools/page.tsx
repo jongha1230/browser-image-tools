@@ -12,11 +12,12 @@ export const metadata: Metadata = createPageMetadata(
 export default function ToolsPage() {
   return (
     <PageLayout breadcrumbs={[{ href: "/", label: "홈" }, { label: "도구" }]}>
-      <PageHero eyebrow="이미지 도구 허브" title="압축, 리사이즈, 포맷 변환, EXIF 제거 도구 모음">
+      <PageHero eyebrow="이미지 도구 허브" title="업로드 전 이미지 압축, 리사이즈, 변환, EXIF 제거 도구">
         <p>
-          이미지 압축, 크기 조절, 포맷 변환, EXIF 제거를 작업별로 분리해
-          필요한 도구만 바로 열 수 있습니다. 모든 처리와 저장 준비는 현재
-          브라우저 안에서 이뤄집니다.
+          이미지 압축, 크기 조절, 포맷 변환, EXIF 제거를 작업 목적별로 나눠
+          필요한 도구만 바로 열 수 있습니다. 블로그 발행, 쇼핑몰 등록, 문서
+          첨부 전에 모든 처리와 저장 준비를 현재 브라우저 안에서 끝낼 수
+          있습니다.
         </p>
       </PageHero>
 

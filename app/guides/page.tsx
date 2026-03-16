@@ -17,11 +17,11 @@ export default function GuidesPage() {
 
   return (
     <PageLayout breadcrumbs={[{ href: "/", label: "홈" }, { label: "가이드" }]}>
-      <PageHero eyebrow="실전 가이드" title="이미지 작업 전에 필요한 판단 기준만 모았습니다">
+      <PageHero eyebrow="실전 가이드" title="이미지 업로드 전 압축, 리사이즈, 변환 판단 가이드">
         <p>
           압축 세기, 형식 선택, 작업 순서, 배치 전 점검처럼 실제로 자주
-          막히는 지점을 한국어 기준으로 정리했습니다. 각 가이드는 관련 도구와
-          이어져 있어 읽고 바로 작업할 수 있습니다.
+          막히는 지점을 한국어 기준으로 정리했습니다. 블로그 발행과 쇼핑몰
+          이미지 준비에 바로 적용할 수 있는 가이드만 모았습니다.
         </p>
         <div className="hero__actions">
           <Link className="button-link" href="/tools">
