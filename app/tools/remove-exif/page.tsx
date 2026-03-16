@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { BrowserSupportSection } from "@/components/browser-support-section";
 import { PageHero, PageLayout, PageSection } from "@/components/page-layout";
 import { StructuredDataScript } from "@/components/structured-data-script";
 import { ToolShell } from "@/components/tool-shell";
@@ -56,6 +57,8 @@ export default function RemoveExifPage() {
         sectionId={workspaceId}
         variant="removeExif"
       />
+
+      <BrowserSupportSection />
 
       <PageSection
         title="공유 전에 EXIF를 확인하는 이유"
