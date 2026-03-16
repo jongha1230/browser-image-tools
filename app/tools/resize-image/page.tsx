@@ -2,13 +2,24 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { PageHero, PageLayout, PageSection } from "@/components/page-layout";
+import { StructuredDataScript } from "@/components/structured-data-script";
 import { ToolShell } from "@/components/tool-shell";
 import { getGuidesForTool, getToolRoute } from "@/lib/site-content";
 import { createPageMetadata, getPageMetadataEntry } from "@/lib/site-metadata";
+import { createBreadcrumbListStructuredData } from "@/lib/structured-data";
 
 const tool = getToolRoute("resize-image");
 const relatedGuides = getGuidesForTool(tool.slug).slice(0, 2);
 const workspaceId = "resize-image-workspace";
+const breadcrumbs = [
+  { href: "/", label: "홈" },
+  { href: "/tools", label: "도구" },
+  { label: tool.shortLabel },
+] as const;
+const breadcrumbStructuredData = createBreadcrumbListStructuredData({
+  breadcrumbs,
+  currentPath: tool.href,
+});
 
 export const metadata: Metadata = createPageMetadata(
   getPageMetadataEntry(tool.href),
@@ -16,13 +27,8 @@ export const metadata: Metadata = createPageMetadata(
 
 export default function ResizeImagePage() {
   return (
-    <PageLayout
-      breadcrumbs={[
-        { href: "/", label: "홈" },
-        { href: "/tools", label: "도구" },
-        { label: tool.shortLabel },
-      ]}
-    >
+    <PageLayout breadcrumbs={breadcrumbs}>
+      <StructuredDataScript data={breadcrumbStructuredData} />
       <PageHero eyebrow="이미지 크기 조절 도구" title={tool.title}>
         <p>
           썸네일 규격, 상품 이미지, 문서 첨부 크기를 맞출 때 쓰는 도구입니다.
