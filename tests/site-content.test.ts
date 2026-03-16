@@ -35,6 +35,10 @@ describe("site content scaffold", () => {
       "/guides/product-thumbnail-image-settings",
       "/guides/avoid-repeat-export-quality-loss",
       "/guides/when-png-is-the-wrong-choice",
+      "/guides/blog-image-upload-final-checklist",
+      "/guides/listing-image-resize-vs-compress",
+      "/guides/detail-image-upload-mistakes",
+      "/guides/batch-cleanup-before-product-upload",
       "/guides/image-compression-basics",
       "/guides/webp-vs-jpeg-vs-png",
       "/guides/remove-exif-for-privacy",
@@ -91,6 +95,10 @@ describe("site content scaffold", () => {
       "/guides/product-thumbnail-image-settings",
       "/guides/avoid-repeat-export-quality-loss",
       "/guides/when-png-is-the-wrong-choice",
+      "/guides/blog-image-upload-final-checklist",
+      "/guides/listing-image-resize-vs-compress",
+      "/guides/detail-image-upload-mistakes",
+      "/guides/batch-cleanup-before-product-upload",
       "/guides/image-compression-basics",
       "/guides/webp-vs-jpeg-vs-png",
       "/guides/remove-exif-for-privacy",
@@ -116,6 +124,7 @@ describe("site content scaffold", () => {
     }
 
     expect(guideRoutes.filter((guide) => guide.cluster === "cluster-02")).toHaveLength(4);
+    expect(guideRoutes.filter((guide) => guide.cluster === "cluster-03")).toHaveLength(4);
   });
 
   it("covers every current route with unique metadata", () => {

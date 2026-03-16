@@ -30,6 +30,10 @@ Routing rules:
 - `/guides/product-thumbnail-image-settings`
 - `/guides/avoid-repeat-export-quality-loss`
 - `/guides/when-png-is-the-wrong-choice`
+- `/guides/blog-image-upload-final-checklist`
+- `/guides/listing-image-resize-vs-compress`
+- `/guides/detail-image-upload-mistakes`
+- `/guides/batch-cleanup-before-product-upload`
 - `/guides/image-compression-basics`
 - `/guides/webp-vs-jpeg-vs-png`
 - `/guides/remove-exif-for-privacy`
@@ -172,6 +176,38 @@ Purpose:
 - explain when PNG is not the most practical output format
 - help users compare PNG against JPEG and WebP for photos, thumbnails, and uploads
 - connect format tradeoffs back to the current conversion and compression tools
+
+### `/guides/blog-image-upload-final-checklist`
+
+Purpose:
+
+- explain what should be checked right before blog publishing image upload
+- separate representative images, inline photos, and captures into different final checks
+- connect final publishing decisions back to resize, compression, and conversion tools
+
+### `/guides/listing-image-resize-vs-compress`
+
+Purpose:
+
+- explain whether list and thumbnail images should be resized first or only compressed
+- help users split listing-image decisions from detail-image decisions
+- connect shopping-list upload workflows back to resize and compression tools
+
+### `/guides/detail-image-upload-mistakes`
+
+Purpose:
+
+- explain common mistakes when product detail images and explanation captures are uploaded together
+- help users separate photo files from text-heavy captures before export
+- connect format, compression, and scope-limit decisions back to the existing tools
+
+### `/guides/batch-cleanup-before-product-upload`
+
+Purpose:
+
+- explain how to group many product images before repeated uploads
+- help users align list images, detail images, and camera originals with one batch workflow
+- connect resize, compression, conversion, and EXIF cleanup to real ecommerce preparation work
 
 ### `/about`
 

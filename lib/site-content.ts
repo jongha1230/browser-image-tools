@@ -2,7 +2,7 @@ export const repositoryUrl = "https://github.com/jongha1230/browser-image-tools"
 export const repositoryIssuesUrl = `${repositoryUrl}/issues`;
 export const contactEmail = "browserimagetools@gmail.com";
 export const contactEmailHref = `mailto:${contactEmail}`;
-export const siteUpdatedAt = "2026-03-16T16:29:00+09:00";
+export const siteUpdatedAt = "2026-03-16T17:10:00+09:00";
 
 export type ToolSlug =
   | "compress-image"
@@ -20,12 +20,16 @@ export type GuideSlug =
   | "product-thumbnail-image-settings"
   | "avoid-repeat-export-quality-loss"
   | "when-png-is-the-wrong-choice"
+  | "blog-image-upload-final-checklist"
+  | "listing-image-resize-vs-compress"
+  | "detail-image-upload-mistakes"
+  | "batch-cleanup-before-product-upload"
   | "image-compression-basics"
   | "webp-vs-jpeg-vs-png"
   | "remove-exif-for-privacy"
   | "batch-resize-checklist";
 
-export type GuideCluster = "core" | "cluster-01" | "cluster-02";
+export type GuideCluster = "core" | "cluster-01" | "cluster-02" | "cluster-03";
 
 type ToolRouteBase<TSlug extends ToolSlug> = {
   slug: TSlug;
@@ -80,6 +84,10 @@ export type GuideRoute =
   | GuideRouteBase<"product-thumbnail-image-settings">
   | GuideRouteBase<"avoid-repeat-export-quality-loss">
   | GuideRouteBase<"when-png-is-the-wrong-choice">
+  | GuideRouteBase<"blog-image-upload-final-checklist">
+  | GuideRouteBase<"listing-image-resize-vs-compress">
+  | GuideRouteBase<"detail-image-upload-mistakes">
+  | GuideRouteBase<"batch-cleanup-before-product-upload">
   | GuideRouteBase<"image-compression-basics">
   | GuideRouteBase<"webp-vs-jpeg-vs-png">
   | GuideRouteBase<"remove-exif-for-privacy">
@@ -469,6 +477,7 @@ export const guideRoutes = [
       "browser-local-image-processing-limits",
       "batch-resize-checklist",
       "blog-cms-image-prep-checklist",
+      "batch-cleanup-before-product-upload",
     ],
   },
   {
@@ -617,6 +626,8 @@ export const guideRoutes = [
     ],
     relatedTools: ["resize-image", "compress-image", "convert-image"],
     relatedGuides: [
+      "blog-image-upload-final-checklist",
+      "detail-image-upload-mistakes",
       "resize-or-compress-first",
       "webp-vs-jpeg-vs-png",
       "batch-processing-preflight-checklist",
@@ -698,6 +709,8 @@ export const guideRoutes = [
     ],
     relatedTools: ["resize-image", "compress-image", "convert-image"],
     relatedGuides: [
+      "listing-image-resize-vs-compress",
+      "batch-cleanup-before-product-upload",
       "batch-resize-checklist",
       "image-compression-basics",
       "transparent-image-conversion-checklist",
@@ -837,6 +850,309 @@ export const guideRoutes = [
       "webp-vs-jpeg-vs-png",
       "transparent-image-conversion-checklist",
       "why-converted-images-get-larger",
+      "detail-image-upload-mistakes",
+    ],
+  },
+  {
+    slug: "blog-image-upload-final-checklist",
+    href: "/guides/blog-image-upload-final-checklist",
+    categoryLabel: "블로그 발행",
+    cluster: "cluster-03",
+    title: "블로그 발행 직전 이미지 업로드 체크리스트",
+    description:
+      "대표 이미지, 본문 사진, 캡처를 발행 직전에 어떤 기준으로 다시 보고 올릴지 정리한 가이드입니다.",
+    metadataDescription:
+      "블로그 발행 직전 이미지 업로드에서 대표 이미지, 본문 사진, 캡처를 어떻게 다시 점검할지 설명하는 한국어 가이드입니다.",
+    intro:
+      "초안 단계에서는 괜찮아 보여도 발행 직전에는 카드 썸네일 비율, 본문 캡처 가독성, 업로드 속도 문제로 다시 걸리는 경우가 많습니다. 자동 축소에 기대기보다 마지막 업로드용 파생본을 짧게 점검해 두면 교체 작업이 훨씬 줄어듭니다.",
+    readTime: "5분",
+    publishedAt: "2026-03-16T17:10:00+09:00",
+    updatedAt: "2026-03-16T17:10:00+09:00",
+    focusPoints: [
+      "대표 이미지와 본문 이미지는 같은 파일 하나로 끝내려 할수록 둘 다 애매해지기 쉽습니다.",
+      "텍스트가 있는 캡처는 용량보다 모바일 가독성을 먼저 확인해야 합니다.",
+      "발행 직전에는 업로드 순서와 파일명까지 정리해 두어야 교체 실수가 줄어듭니다.",
+    ],
+    sections: [
+      {
+        title: "대표 이미지와 본문 이미지를 분리해서 검수하세요",
+        paragraphs: [
+          "대표 이미지는 목록 카드와 공유 미리보기에서 먼저 보이고, 본문 이미지는 실제 읽는 폭에서 보입니다. 같은 파일 하나로 두 역할을 모두 맡기면 대표 이미지는 너무 무겁고 본문 이미지는 지나치게 크거나 답답해지기 쉽습니다.",
+          "초안 작성 중에는 원본을 써도 되지만, 발행 직전에는 대표용 파생본과 본문용 파생본을 따로 남기는 편이 훨씬 관리하기 쉽습니다.",
+        ],
+        bullets: [
+          "대표 이미지와 본문 삽입 이미지를 업로드 폴더부터 분리하기",
+          "목록 카드와 본문 폭에서 각각 어떻게 보일지 따로 확인하기",
+          "대표 이미지는 불필요하게 큰 해상도를 그대로 두지 않기",
+          "본문용 파일은 실제 문단 폭에서 선명한지만 먼저 보기",
+        ],
+      },
+      {
+        title: "캡처와 사진은 같은 압축 기준으로 보지 마세요",
+        paragraphs: [
+          "본문 사진은 JPEG나 WebP로 가볍게 정리해도 무난한 경우가 많지만, 글자가 들어간 캡처는 과한 압축에서 먼저 흐려집니다. 캡처를 사진과 같은 품질 기준으로 돌리면 읽기 어려운 본문이 생기기 쉽습니다.",
+          "특히 튜토리얼, 비교표, 관리 화면처럼 작은 글자가 많은 캡처는 모바일 폭에서 다시 확인해야 합니다. 데스크톱 미리보기에서 괜찮아 보여도 실제 게시 후에는 글자가 먼저 무너집니다.",
+        ],
+        bullets: [
+          "사진과 캡처를 같은 배치 큐에 넣지 않기",
+          "캡처는 PNG 또는 WebP도 함께 비교하기",
+          "본문 캡처는 모바일 폭 미리보기로 글자 가독성 확인하기",
+          "용량 숫자만 보고 캡처를 과하게 다시 저장하지 않기",
+        ],
+      },
+      {
+        title: "발행 직전에는 업로드 동선까지 정리하세요",
+        paragraphs: [
+          "블로그 발행 직전에는 이미지 품질뿐 아니라 교체 동선도 중요합니다. 파일명이 제각각이거나 대표 이미지와 본문 이미지가 섞여 있으면 업로드 후 다시 바꾸는 시간이 더 오래 걸립니다.",
+          "첫 게시 전에 대표 이미지 1장과 본문 캡처 1장만 먼저 올려 보고, 문제가 없으면 나머지를 한 번에 올리는 편이 안전합니다. 발행 직전 급하게 여러 번 다시 저장하는 습관은 품질만 더 깎습니다.",
+        ],
+        bullets: [
+          "대표 이미지 1장, 본문 이미지 1장으로 먼저 시험 업로드하기",
+          "파일명에 cover, inline 같은 용도 표기를 붙여 구분하기",
+          "업로드 후 바로 교체할 일이 없도록 모바일 미리보기까지 확인하기",
+          "재저장은 원본에서 다시 만들고 기존 파생본을 또 저장하지 않기",
+        ],
+      },
+    ],
+    relatedTools: ["resize-image", "compress-image", "convert-image"],
+    relatedGuides: [
+      "blog-cms-image-prep-checklist",
+      "detail-image-upload-mistakes",
+      "webp-vs-jpeg-vs-png",
+      "avoid-repeat-export-quality-loss",
+    ],
+  },
+  {
+    slug: "listing-image-resize-vs-compress",
+    href: "/guides/listing-image-resize-vs-compress",
+    categoryLabel: "쇼핑몰 업로드",
+    cluster: "cluster-03",
+    title: "상품 리스트 이미지는 리사이즈와 압축 중 무엇부터 볼까",
+    description:
+      "상품 리스트 카드와 썸네일 업로드에서 리사이즈와 압축 중 무엇을 먼저 적용해야 하는지 정리한 가이드입니다.",
+    metadataDescription:
+      "상품 리스트 이미지 업로드에서 리사이즈와 압축 중 어느 쪽을 먼저 적용할지, 썸네일과 상세 이미지를 어떻게 나눌지 설명하는 한국어 가이드입니다.",
+    intro:
+      "쇼핑몰 리스트 이미지는 화면에서 작게 보이지만, 원본은 생각보다 큰 경우가 많습니다. 무조건 압축부터 세게 거는 것보다 리스트 슬롯 크기와 확대 필요 여부를 먼저 나누면 훨씬 덜 망가집니다.",
+    readTime: "5분",
+    publishedAt: "2026-03-16T17:10:00+09:00",
+    updatedAt: "2026-03-16T17:10:00+09:00",
+    focusPoints: [
+      "목록 카드에 실제로 보이는 크기가 작다면 리사이즈가 먼저인 경우가 많습니다.",
+      "상세 확대에 다시 쓸 파일이라면 압축만으로 끝내는 편이 나을 수 있습니다.",
+      "리스트용과 상세용을 같은 파일 하나로 맞추려는 습관이 재작업을 가장 많이 만듭니다.",
+    ],
+    sections: [
+      {
+        title: "리스트 슬롯이 작다면 리사이즈가 먼저입니다",
+        paragraphs: [
+          "상품 목록 카드에 작게 들어갈 이미지라면 원본 해상도를 그대로 들고 갈 이유가 많지 않습니다. 카드가 400~800픽셀 수준으로만 보이는데 3000픽셀 원본을 먼저 압축만 하면, 용량은 줄어도 불필요하게 큰 파일을 계속 들고 있게 됩니다.",
+          "이럴 때는 먼저 리스트 슬롯에 맞는 크기로 줄이고, 그 결과에 가볍게 압축을 거는 편이 예측하기 쉽습니다. 특히 여러 상품을 한 번에 맞출 때 일관성이 좋아집니다.",
+        ],
+        bullets: [
+          "실제 리스트 카드에서 보이는 최대 폭 먼저 확인하기",
+          "어차피 줄여야 하는 썸네일이면 리사이즈부터 적용하기",
+          "리사이즈 후 결과가 여전히 무거우면 그때 압축 강도 조정하기",
+          "대표 상품 2~3장으로 먼저 카드 화면을 비교하기",
+        ],
+      },
+      {
+        title: "압축만으로 끝나는 경우도 따로 있습니다",
+        paragraphs: [
+          "리스트 이미지라도 확대 보기, 상세 연결, 재사용 계획이 걸려 있으면 해상도 유지가 더 중요할 수 있습니다. 이미 플랫폼 권장 크기 안에 들어와 있다면 압축만 조금 조정해서 끝내는 편이 낫습니다.",
+          "특히 작은 글자, 질감, 섬세한 패턴이 중요한 상품은 크기를 더 줄이는 것보다 품질 손실을 먼저 피해야 합니다.",
+        ],
+        bullets: [
+          "현재 픽셀이 이미 권장 범위 안인지 먼저 보기",
+          "확대나 재사용이 필요한 상품은 해상도 유지 여부 확인하기",
+          "압축 결과에서 텍스처와 글자 선명도를 같이 보기",
+          "리스트용이라도 모든 상품에 같은 압축 세기를 강요하지 않기",
+        ],
+      },
+      {
+        title: "상세 이미지와 같은 규칙으로 묶지 마세요",
+        paragraphs: [
+          "리스트 카드 이미지는 빠른 로딩과 일관성이 우선이지만, 상세 이미지는 디테일과 확대 품질이 더 중요합니다. 두 용도를 한 규칙으로 묶으면 한쪽은 항상 손해를 봅니다.",
+          "가장 실무적인 방법은 리스트용 파생본과 상세용 파생본을 분리하고, 리스트용만 따로 리사이즈·압축 기준을 고정하는 것입니다.",
+        ],
+        bullets: [
+          "리스트용과 상세용 다운로드 묶음을 분리하기",
+          "작은 리스트 파일을 상세 이미지로 다시 쓰지 않기",
+          "한 상품군 전체 적용 전 대표 샘플만 먼저 업로드해 보기",
+          "규격이 섞인 원본은 비율 유지 여부를 먼저 결정하기",
+        ],
+      },
+    ],
+    relatedTools: ["resize-image", "compress-image"],
+    relatedGuides: [
+      "product-thumbnail-image-settings",
+      "resize-or-compress-first",
+      "batch-resize-checklist",
+      "batch-cleanup-before-product-upload",
+    ],
+  },
+  {
+    slug: "detail-image-upload-mistakes",
+    href: "/guides/detail-image-upload-mistakes",
+    categoryLabel: "상세 이미지",
+    cluster: "cluster-03",
+    title: "상세 이미지와 설명 캡처 업로드에서 자주 하는 실수",
+    description:
+      "상품 상세 이미지, 설명 캡처, 사용 예시 이미지를 올릴 때 반복되는 실수와 점검 순서를 정리한 가이드입니다.",
+    metadataDescription:
+      "상품 상세 이미지와 설명 캡처 업로드에서 형식 선택, 압축, 검수 순서에서 자주 생기는 실수를 설명하는 한국어 가이드입니다.",
+    intro:
+      "상세 페이지는 사진 몇 장만 올리는 곳이 아니라, 제품 컷·설명 캡처·사이즈 표 같은 서로 다른 이미지가 함께 들어가는 자리입니다. 이걸 한 규칙으로 밀어 넣으면 글자는 흐려지고 사진은 무거워지기 쉽습니다.",
+    readTime: "5분",
+    publishedAt: "2026-03-16T17:10:00+09:00",
+    updatedAt: "2026-03-16T17:10:00+09:00",
+    focusPoints: [
+      "제품 사진과 설명 캡처는 같은 형식과 압축 기준으로 묶지 않는 편이 안전합니다.",
+      "상세 페이지는 데스크톱보다 모바일 폭에서 먼저 품질 차이가 드러납니다.",
+      "이 사이트는 리사이즈·압축·변환·EXIF 제거까지 지원하지만 크롭이나 규정 자동 검사는 제공하지 않습니다.",
+    ],
+    sections: [
+      {
+        title: "사진 컷과 설명 캡처를 같은 큐에 넣지 마세요",
+        paragraphs: [
+          "제품 사진은 자연스러운 질감과 용량 균형이 중요하지만, 설명 캡처와 사이즈 표는 글자 가독성이 더 중요합니다. 둘을 같은 JPEG 품질 값으로 밀어 넣으면 한쪽은 지나치게 무겁고 다른 쪽은 쉽게 흐려집니다.",
+          "상세 페이지를 구성하는 이미지는 내용 타입이 다르므로, 업로드 전에 사진 묶음과 캡처 묶음을 분리하는 것만으로도 실수가 크게 줄어듭니다.",
+        ],
+        bullets: [
+          "제품 사진, 설명 캡처, 표 이미지를 각각 다른 묶음으로 나누기",
+          "글자와 얇은 선이 있는 파일은 별도로 먼저 시험하기",
+          "상세 페이지 전체 이미지를 한 형식으로 통일하려 하지 않기",
+          "배치 처리 전 대표 캡처 1장과 대표 사진 1장을 따로 비교하기",
+        ],
+      },
+      {
+        title: "글자 있는 캡처는 용량보다 읽힘을 먼저 보세요",
+        paragraphs: [
+          "상품 설명 캡처나 배송 안내 표는 파일 크기가 조금 늘어도 글자가 읽혀야 의미가 있습니다. 캡처를 과하게 압축해 놓으면 모바일에서 확대하지 않는 한 내용을 읽기 어려워집니다.",
+          "이런 파일은 PNG나 WebP도 같이 비교해 보고, 숫자와 표 선이 살아 있는지를 먼저 보세요. 용량만 보고 판단하면 상세 페이지 완성 후에 다시 만드는 일이 생깁니다.",
+        ],
+        bullets: [
+          "캡처는 JPEG만 고집하지 말고 PNG 또는 WebP도 같이 비교하기",
+          "모바일 폭에서 글자 크기와 표 선이 무너지지 않는지 보기",
+          "한 번 괜찮아 보였던 파생본을 다시 또 저장하지 않기",
+          "파일 크기보다 읽힘과 선명도를 먼저 점검하기",
+        ],
+      },
+      {
+        title: "상세 화면 기준으로 검수하지 않으면 늦게 발견합니다",
+        paragraphs: [
+          "상세 이미지는 편집 화면에서 단독으로 볼 때보다 실제 상세 영역에 연속으로 들어갔을 때 문제가 더 잘 드러납니다. 특히 작은 화면에서는 글자와 얇은 라인이 먼저 무너집니다.",
+          "사진도 마찬가지로 흰 배경 제품컷, 어두운 소품컷, 반사 재질 제품은 압축 흔적이 다르게 보일 수 있으니 샘플 업로드로 실제 배치를 확인하는 편이 안전합니다.",
+        ],
+        bullets: [
+          "모바일 상세 화면에서 먼저 위아래로 이어서 보기",
+          "밝은 제품컷과 어두운 제품컷을 모두 샘플로 확인하기",
+          "글자 캡처는 확대 없이 읽히는지 기준 잡기",
+          "문제 파일만 다시 만들 수 있게 파일명을 분리해 두기",
+        ],
+      },
+      {
+        title: "도구로 정리할 수 있는 범위를 먼저 나누세요",
+        paragraphs: [
+          "이 사이트에서 바로 정리할 수 있는 것은 해상도, 용량, 출력 형식, EXIF 메타데이터입니다. 반대로 잘라내기, 가리기, 워터마크 추가, 플랫폼별 상세 규정 검사는 현재 범위가 아닙니다.",
+          "즉 픽셀 안에 이미 개인 정보나 불필요한 문구가 박혀 있다면 그 수정은 다른 편집 단계에서 끝내고, 여기에서는 업로드용 파생본 정리에 집중하는 편이 맞습니다.",
+        ],
+        bullets: [
+          "해상도, 형식, 용량, EXIF 정리는 여기서 처리하기",
+          "잘라내기와 마스킹은 업로드 전에 다른 편집 단계에서 끝내기",
+          "플랫폼별 세부 규정은 직접 확인하고 여기서 자동 검사를 기대하지 않기",
+          "최종 업로드 전 샘플 몇 장으로 실제 상세 영역을 다시 보기",
+        ],
+      },
+    ],
+    relatedTools: ["compress-image", "convert-image", "resize-image", "remove-exif"],
+    relatedGuides: [
+      "when-png-is-the-wrong-choice",
+      "webp-vs-jpeg-vs-png",
+      "avoid-repeat-export-quality-loss",
+      "blog-image-upload-final-checklist",
+    ],
+  },
+  {
+    slug: "batch-cleanup-before-product-upload",
+    href: "/guides/batch-cleanup-before-product-upload",
+    categoryLabel: "배치 업로드",
+    cluster: "cluster-03",
+    title: "상품 이미지를 여러 장 올리기 전 배치 정리 순서",
+    description:
+      "대표 이미지, 리스트 컷, 상세 컷을 여러 장 올리기 전에 어떤 기준으로 나누고 정리할지 정리한 가이드입니다.",
+    metadataDescription:
+      "상품 이미지를 여러 장 업로드하기 전에 리스트 컷, 상세 컷, 촬영 원본을 어떻게 나누고 정리할지 설명하는 한국어 가이드입니다.",
+    intro:
+      "상품 이미지를 한 번에 많이 올릴 때 진짜 시간이 걸리는 부분은 처리 버튼을 누르는 순간보다, 섞인 파일을 다시 나누고 재업로드하는 순간입니다. 업로드 슬롯 기준으로 먼저 묶어 두면 배치 처리의 이점이 살아납니다.",
+    readTime: "6분",
+    publishedAt: "2026-03-16T17:10:00+09:00",
+    updatedAt: "2026-03-16T17:10:00+09:00",
+    focusPoints: [
+      "상품군보다 업로드 슬롯 기준으로 먼저 묶는 편이 설정 실수를 줄입니다.",
+      "대표 샘플 몇 장으로 규격과 형식을 고정한 뒤 나머지에 넓히는 방식이 안전합니다.",
+      "촬영 원본을 그대로 쓰는 경우라면 EXIF와 파일명 정리도 배치 준비에 포함됩니다.",
+    ],
+    sections: [
+      {
+        title: "상품군보다 업로드 슬롯부터 나누세요",
+        paragraphs: [
+          "같은 상품군 안에서도 대표 이미지, 리스트 카드, 상세 설명용 이미지는 요구 조건이 다릅니다. 상품명 기준으로 먼저 묶으면 나중에 슬롯별 규격 차이 때문에 다시 나누게 되는 일이 많습니다.",
+          "배치 작업 전에 커버용, 리스트용, 상세용처럼 실제 업로드 칸 기준으로 파일을 나눠 두면 어떤 도구를 써야 할지도 훨씬 빨리 정해집니다.",
+        ],
+        bullets: [
+          "대표 이미지, 리스트 이미지, 상세 이미지를 폴더나 파일명으로 분리하기",
+          "같은 상품이라도 업로드 슬롯이 다르면 별도 묶음으로 다루기",
+          "가로형, 세로형, 정사각형 원본이 섞였는지 먼저 확인하기",
+          "플랫폼 권장 규격은 직접 확인하고 묶음 이름에 메모하기",
+        ],
+      },
+      {
+        title: "대표 샘플로 규격과 형식을 먼저 고정하세요",
+        paragraphs: [
+          "수십 장을 한 번에 처리하기 전에 가장 까다로워 보이는 파일 몇 장으로 먼저 리사이즈, 압축, 형식 변환 결과를 확인해야 합니다. 샘플이 통과하면 나머지를 같은 설정으로 넓히는 방식이 훨씬 안전합니다.",
+          "특히 누끼 컷과 일반 사진이 섞인 경우에는 같은 형식 선택이 모두에게 맞지 않을 수 있으니, 샘플 단계에서부터 묶음을 더 쪼갤 필요가 있는지 판단해야 합니다.",
+        ],
+        bullets: [
+          "가장 큰 파일과 가장 복잡한 파일을 대표 샘플로 고르기",
+          "리사이즈 후에도 무거우면 압축이나 형식 변환을 이어서 비교하기",
+          "누끼 컷과 일반 사진은 샘플 단계부터 따로 보기",
+          "샘플이 통과한 뒤에만 전체 배치에 같은 설정 적용하기",
+        ],
+      },
+      {
+        title: "촬영 원본이면 EXIF와 파일명도 같이 정리하세요",
+        paragraphs: [
+          "스마트폰이나 카메라에서 바로 가져온 상품 사진에는 위치, 기기, 촬영 시각 같은 EXIF 정보가 남아 있을 수 있습니다. 외부 파트너와 공유하거나 공개 업로드에 가까운 흐름이라면 메타데이터 정리도 배치 준비에 포함하는 편이 좋습니다.",
+          "또한 결과 파일명이 원본과 뒤섞이면 업로드 단계에서 다시 혼란이 생깁니다. 용도와 규격이 드러나는 이름으로 내려받아 두면 재업로드가 훨씬 쉽습니다.",
+        ],
+        bullets: [
+          "촬영 원본을 그대로 쓸 때는 EXIF 제거 필요 여부 먼저 판단하기",
+          "공개 업로드용과 내부 보관용 파일을 따로 남기기",
+          "파일명에 용도와 규격을 붙여 다시 섞이지 않게 만들기",
+          "민감한 메타데이터 제거가 필요하면 배치 처리 전에 먼저 실행하기",
+        ],
+      },
+      {
+        title: "다운로드 묶음과 업로드 묶음을 맞추세요",
+        paragraphs: [
+          "배치 작업의 마지막 실수는 다운로드 구조와 실제 업로드 구조가 따로 노는 것입니다. ZIP으로 내려받은 뒤 다시 손으로 나누기 시작하면 처음의 정리 기준이 금방 무너집니다.",
+          "처리 단계에서 만든 묶음이 곧 업로드 묶음이 되도록 맞춰 두면, 상품 등록 반복 작업에서도 같은 흐름을 재사용하기 쉽습니다.",
+        ],
+        bullets: [
+          "ZIP 하나가 업로드 한 묶음과 대응되게 정리하기",
+          "대표 이미지와 상세 이미지를 같은 다운로드 묶음에 섞지 않기",
+          "업로드 직전에는 샘플 몇 장만 먼저 넣어 실제 슬롯에 맞는지 확인하기",
+          "재작업이 생기면 기존 파생본이 아니라 원본 묶음에서 다시 시작하기",
+        ],
+      },
+    ],
+    relatedTools: ["resize-image", "compress-image", "convert-image", "remove-exif"],
+    relatedGuides: [
+      "batch-processing-preflight-checklist",
+      "product-thumbnail-image-settings",
+      "listing-image-resize-vs-compress",
+      "remove-exif-for-privacy",
     ],
   },
   {
@@ -1041,6 +1357,7 @@ export const guideRoutes = [
     relatedGuides: [
       "browser-local-image-processing-limits",
       "batch-processing-preflight-checklist",
+      "batch-cleanup-before-product-upload",
     ],
   },
   {
@@ -1110,6 +1427,7 @@ export const guideRoutes = [
       "resize-or-compress-first",
       "browser-local-image-processing-limits",
       "product-thumbnail-image-settings",
+      "listing-image-resize-vs-compress",
     ],
   },
 ] satisfies GuideRoute[];
@@ -1131,6 +1449,10 @@ export const requiredRoutes = [
   "/guides/product-thumbnail-image-settings",
   "/guides/avoid-repeat-export-quality-loss",
   "/guides/when-png-is-the-wrong-choice",
+  "/guides/blog-image-upload-final-checklist",
+  "/guides/listing-image-resize-vs-compress",
+  "/guides/detail-image-upload-mistakes",
+  "/guides/batch-cleanup-before-product-upload",
   "/guides/image-compression-basics",
   "/guides/webp-vs-jpeg-vs-png",
   "/guides/remove-exif-for-privacy",
