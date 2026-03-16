@@ -8,7 +8,7 @@ export type BreadcrumbItem = {
 
 type PageLayoutProps = {
   children: ReactNode;
-  breadcrumbs?: BreadcrumbItem[];
+  breadcrumbs?: readonly BreadcrumbItem[];
 };
 
 type PageHeroProps = {

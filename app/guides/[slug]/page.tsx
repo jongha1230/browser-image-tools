@@ -3,8 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PageHero, PageLayout, PageSection } from "@/components/page-layout";
+import { StructuredDataScript } from "@/components/structured-data-script";
 import { getGuideRoute, guideRoutes, getToolRoute } from "@/lib/site-content";
 import { createPageMetadata } from "@/lib/site-metadata";
+import {
+  createBreadcrumbListStructuredData,
+  createGuideArticleStructuredData,
+} from "@/lib/structured-data";
 
 type GuideDetailPageProps = {
   params: Promise<{ slug: string }>;
@@ -47,15 +52,21 @@ export default async function GuideDetailPage(
 
   const relatedTools = guide.relatedTools.map((toolSlug) => getToolRoute(toolSlug));
   const relatedGuides = guide.relatedGuides.map((guideSlug) => getGuideRoute(guideSlug));
+  const breadcrumbs = [
+    { href: "/", label: "홈" },
+    { href: "/guides", label: "가이드" },
+    { label: guide.title },
+  ] as const;
+  const breadcrumbStructuredData = createBreadcrumbListStructuredData({
+    breadcrumbs,
+    currentPath: guide.href,
+  });
+  const articleStructuredData = createGuideArticleStructuredData(guide);
 
   return (
-    <PageLayout
-      breadcrumbs={[
-        { href: "/", label: "홈" },
-        { href: "/guides", label: "가이드" },
-        { label: guide.title },
-      ]}
-    >
+    <PageLayout breadcrumbs={breadcrumbs}>
+      <StructuredDataScript data={breadcrumbStructuredData} />
+      <StructuredDataScript data={articleStructuredData} />
       <PageHero eyebrow="실전 가이드" title={guide.title}>
         <p>{guide.description}</p>
         <p>{guide.intro}</p>

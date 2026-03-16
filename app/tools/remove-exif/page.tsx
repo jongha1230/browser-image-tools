@@ -2,13 +2,24 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { PageHero, PageLayout, PageSection } from "@/components/page-layout";
+import { StructuredDataScript } from "@/components/structured-data-script";
 import { ToolShell } from "@/components/tool-shell";
 import { getGuidesForTool, getToolRoute } from "@/lib/site-content";
 import { createPageMetadata, getPageMetadataEntry } from "@/lib/site-metadata";
+import { createBreadcrumbListStructuredData } from "@/lib/structured-data";
 
 const tool = getToolRoute("remove-exif");
 const relatedGuides = getGuidesForTool(tool.slug).slice(0, 2);
 const workspaceId = "remove-exif-workspace";
+const breadcrumbs = [
+  { href: "/", label: "홈" },
+  { href: "/tools", label: "도구" },
+  { label: tool.shortLabel },
+] as const;
+const breadcrumbStructuredData = createBreadcrumbListStructuredData({
+  breadcrumbs,
+  currentPath: tool.href,
+});
 
 export const metadata: Metadata = createPageMetadata(
   getPageMetadataEntry(tool.href),
@@ -16,13 +27,8 @@ export const metadata: Metadata = createPageMetadata(
 
 export default function RemoveExifPage() {
   return (
-    <PageLayout
-      breadcrumbs={[
-        { href: "/", label: "홈" },
-        { href: "/tools", label: "도구" },
-        { label: tool.shortLabel },
-      ]}
-    >
+    <PageLayout breadcrumbs={breadcrumbs}>
+      <StructuredDataScript data={breadcrumbStructuredData} />
       <PageHero eyebrow="EXIF 제거 도구" title={tool.title}>
         <p>
           사진을 공유하거나 업로드하기 전에 위치, 기기, 촬영 시각 같은
