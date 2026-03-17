@@ -37,8 +37,9 @@ export default function ResizeImagePage() {
           해상도를 파일별로 비교할 수 있습니다.
         </p>
         <p>
-          비율 유지 여부와 프리셋을 조합해 빠르게 맞출 수 있고, 결과는 현재
-          브라우저 안에서만 처리됩니다.
+          블로그 업로드, 썸네일, 상품 이미지, 빠른 공유용 추천 시작점을 먼저
+          고른 뒤 비율 유지와 픽셀 값을 손으로 다시 다듬을 수 있고, 결과는
+          현재 브라우저 안에서만 처리됩니다.
         </p>
         <div className="hero__actions">
           <a className="button-link" href={`#${workspaceId}`}>
@@ -105,8 +106,8 @@ export default function ResizeImagePage() {
         title="비율 유지와 프리셋을 이렇게 쓰면 편합니다"
         intro={
           <p>
-            비율 유지는 왜곡을 줄이는 기본값이고, 프리셋은 자주 쓰는 규격으로
-            빠르게 시작할 때 유용합니다.
+            비율 유지는 왜곡을 줄이는 기본값이고, 워크플로 프리셋은 업로드
+            목적별 시작점을 빠르게 고를 때 유용합니다.
           </p>
         }
       >

@@ -37,8 +37,9 @@ export default function ConvertImagePage() {
           정보를 나란히 비교할 수 있습니다.
         </p>
         <p>
-          투명 배경 유지 여부와 품질 차이를 확인하면서 필요한 결과만 골라 저장할
-          수 있습니다.
+          블로그 업로드, 썸네일, 상품 이미지, 빠른 공유용 추천 시작점으로 먼저
+          방향을 고른 뒤 출력 형식과 품질을 손으로 다시 맞추면서 필요한 결과만
+          골라 저장할 수 있습니다.
         </p>
         <div className="hero__actions">
           <a className="button-link" href={`#${workspaceId}`}>
@@ -65,7 +66,8 @@ export default function ConvertImagePage() {
         intro={
           <p>
             포맷 변환은 같은 이미지를 다른 저장 방식으로 다시 만들어 호환성,
-            투명 배경 유지, 파일 크기 기준을 맞추는 작업입니다.
+            투명 배경 유지, 파일 크기 기준을 맞추는 작업이며 목적별 시작점을
+            빠르게 잡아 보기 좋습니다.
           </p>
         }
       >

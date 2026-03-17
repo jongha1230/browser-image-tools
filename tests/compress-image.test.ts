@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  compressionWorkflowPresetOptions,
   createCompressedFileName,
   getCompressionDeltaPercent,
   getCompressionMimeTypeLabel,
@@ -55,5 +56,22 @@ describe("compress image helpers", () => {
   it("reports delta percentages and readable labels", () => {
     expect(getCompressionDeltaPercent(1_000, 640)).toBe(36);
     expect(getCompressionMimeTypeLabel("image/webp")).toBe("WebP");
+  });
+
+  it("exposes upload workflow presets with practical starting settings", () => {
+    expect(compressionWorkflowPresetOptions.map((preset) => preset.id)).toEqual([
+      "blog-upload",
+      "thumbnail-preview",
+      "product-image-upload",
+      "quick-share",
+    ]);
+    expect(compressionWorkflowPresetOptions[0]).toMatchObject({
+      outputFormat: "image/webp",
+      quality: 80,
+    });
+    expect(compressionWorkflowPresetOptions[2]).toMatchObject({
+      outputFormat: "image/jpeg",
+      quality: 88,
+    });
   });
 });

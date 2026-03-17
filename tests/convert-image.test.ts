@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  conversionWorkflowPresetOptions,
   createConvertedFileName,
   getConversionOutputDescription,
   getDefaultConversionMimeType,
+  resolveConversionWorkflowMimeType,
 } from "../lib/convert-image";
 
 describe("convert image helpers", () => {
@@ -25,5 +27,19 @@ describe("convert image helpers", () => {
   it("returns user-facing format guidance for the selected output", () => {
     expect(getConversionOutputDescription("image/png")).toContain("투명 배경");
     expect(getConversionOutputDescription("image/webp")).toContain("웹 배포용");
+  });
+
+  it("resolves workflow presets to a different target format when needed", () => {
+    const productPreset = conversionWorkflowPresetOptions.find(
+      (preset) => preset.id === "product-image-upload",
+    );
+
+    expect(productPreset).toBeDefined();
+    expect(
+      resolveConversionWorkflowMimeType("image/png", productPreset!),
+    ).toBe("image/jpeg");
+    expect(
+      resolveConversionWorkflowMimeType("image/jpeg", productPreset!),
+    ).toBe("image/webp");
   });
 });

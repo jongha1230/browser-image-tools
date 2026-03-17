@@ -37,8 +37,9 @@ export default function CompressImagePage() {
           결과를 파일별로 비교할 수 있습니다.
         </p>
         <p>
-          처리와 다운로드 준비는 현재 브라우저 안에서만 이뤄지며, 필요한 결과만
-          개별 저장하거나 ZIP으로 한 번에 내려받을 수 있습니다.
+          블로그 업로드, 썸네일, 상품 이미지, 빠른 공유용 추천 시작점을 먼저
+          고른 뒤 품질과 형식을 수동으로 미세 조정할 수 있고, 처리와 다운로드
+          준비는 현재 브라우저 안에서만 이뤄집니다.
         </p>
         <div className="hero__actions">
           <a className="button-link" href={`#${workspaceId}`}>
@@ -65,7 +66,8 @@ export default function CompressImagePage() {
         intro={
           <p>
             용량 제한이 있거나 전송 속도를 줄이고 싶을 때, 압축은 가장 먼저
-            시도해 볼 수 있는 정리 방법입니다.
+            시도해 볼 수 있는 정리 방법이며 추천 시작점으로 빠르게 세팅을 맞출
+            수 있습니다.
           </p>
         }
       >

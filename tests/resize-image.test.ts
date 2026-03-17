@@ -6,6 +6,7 @@ import {
   createResizedFileName,
   fitWithinResizePreset,
   maxResizeDimension,
+  resizeWorkflowPresetOptions,
   validateResizeDimensions,
 } from "../lib/resize-image";
 
@@ -35,6 +36,23 @@ describe("resize image helpers", () => {
     ).toEqual({
       width: 1200,
       height: 675,
+    });
+  });
+
+  it("exposes workflow presets for common upload-ready box sizes", () => {
+    expect(resizeWorkflowPresetOptions.map((preset) => preset.id)).toEqual([
+      "blog-upload",
+      "thumbnail-preview",
+      "product-image-upload",
+      "quick-share",
+    ]);
+    expect(resizeWorkflowPresetOptions[1]).toMatchObject({
+      width: 1200,
+      height: 630,
+    });
+    expect(resizeWorkflowPresetOptions[2]).toMatchObject({
+      width: 1800,
+      height: 1800,
     });
   });
 

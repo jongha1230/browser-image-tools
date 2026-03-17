@@ -725,6 +725,25 @@ img {
   gap: 10px;
 }
 
+.tool-shell__field-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.tool-shell__field-heading small {
+  color: var(--accent-strong);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.tool-shell__field-heading > span {
+  font-weight: 700;
+  color: var(--text);
+}
+
 .tool-shell__start-list {
   display: grid;
   gap: 10px;
@@ -732,7 +751,7 @@ img {
   padding-left: 20px;
 }
 
-.tool-shell__field span,
+.tool-shell__field > span,
 .tool-shell__stat-list dt {
   font-weight: 700;
   color: var(--text);
@@ -798,6 +817,10 @@ img {
   gap: 12px;
 }
 
+.tool-shell__preset-list--workflow {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
 .tool-shell__preset {
   display: grid;
   gap: 4px;
@@ -818,13 +841,26 @@ img {
   border-color: rgba(36, 74, 57, 0.28);
 }
 
+.tool-shell__preset[data-active="true"] {
+  border-color: rgba(36, 74, 57, 0.34);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(236, 244, 238, 0.92));
+  box-shadow: inset 0 0 0 1px rgba(36, 74, 57, 0.12);
+}
+
 .tool-shell__preset strong {
   color: var(--text);
 }
 
-.tool-shell__preset span {
+.tool-shell__preset small {
   color: var(--muted);
   font-size: 0.95rem;
+}
+
+.tool-shell__preset-description {
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
 }
 
 .tool-shell__range-row {
