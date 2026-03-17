@@ -140,9 +140,9 @@ describe("site content scaffold", () => {
 
     expect(metadata.alternates).toBeUndefined();
     expect(metadata.openGraph).toMatchObject({
-      title: "이미지 압축·리사이즈·변환·EXIF 제거 도구 모음",
+      title: "업로드 전 이미지 정리 도구 모음",
       description:
-        "이미지 압축, 크기 조절, 포맷 변환, EXIF 제거 도구를 작업 목적별로 바로 열고 브라우저 안에서 처리할 수 있는 도구 허브입니다.",
+        "블로그 업로드 전 점검, 썸네일·상품 이미지 준비, 공유 전 EXIF 정리에 맞는 도구를 바로 열고 브라우저 안에서 처리할 수 있는 도구 허브입니다.",
       locale: "ko_KR",
       siteName: "브라우저 이미지 툴",
       type: "website",

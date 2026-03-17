@@ -22,7 +22,7 @@ export function SiteFooter() {
         <div className="site-footer__summary">
           <strong>{siteName}</strong>
           <p>{siteTagline}</p>
-          <p>이미지 압축, 리사이즈, 변환, EXIF 제거는 서버 업로드 없이 현재 브라우저 안에서만 처리합니다.</p>
+          <p>블로그 업로드 전 점검, 썸네일·상품 이미지 준비, 공유 전 EXIF 정리는 서버 업로드 없이 현재 브라우저 안에서만 처리합니다.</p>
           <p>문의는 프로젝트 이메일을 우선 사용하고, 재현 가능한 버그 공유는 GitHub Issues를 보조 경로로 유지합니다.</p>
           <ul className="site-footer__links" aria-label="프로젝트 연락처">
             <li>
