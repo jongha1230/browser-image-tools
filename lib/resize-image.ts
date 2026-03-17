@@ -11,7 +11,57 @@ export type ResizePreset = ResizeDimensions & {
   description: string;
 };
 
+export type ResizeWorkflowPreset = ResizeDimensions & {
+  id:
+    | "blog-upload"
+    | "thumbnail-preview"
+    | "product-image-upload"
+    | "quick-share";
+  label: string;
+  description: string;
+  summary: string;
+};
+
 export const maxResizeDimension = 16_384;
+
+export const resizeWorkflowPresetOptions = [
+  {
+    id: "blog-upload",
+    label: "블로그 업로드",
+    width: 1600,
+    height: 1600,
+    description:
+      "본문 사진과 설명 이미지를 긴 변 1600px 안쪽으로 먼저 정리할 때 쓰는 추천 시작점입니다.",
+    summary: "비율 유지 · 1600 x 1600 박스",
+  },
+  {
+    id: "thumbnail-preview",
+    label: "썸네일 / 미리보기",
+    width: 1200,
+    height: 630,
+    description:
+      "목록 카드나 공유 미리보기처럼 가로형 대표 이미지를 가볍게 맞출 때 시작하기 좋습니다.",
+    summary: "비율 유지 · 1200 x 630 박스",
+  },
+  {
+    id: "product-image-upload",
+    label: "상품 이미지 업로드",
+    width: 1800,
+    height: 1800,
+    description:
+      "상품 대표 이미지와 상세 사진을 비슷한 크기감으로 정리할 때 자주 쓰는 박스 기준입니다.",
+    summary: "비율 유지 · 1800 x 1800 박스",
+  },
+  {
+    id: "quick-share",
+    label: "빠른 공유 / 가볍게",
+    width: 1280,
+    height: 1280,
+    description:
+      "메신저, 문서 첨부, 내부 공유 전에 긴 변을 빠르게 줄일 때 무난한 시작점입니다.",
+    summary: "비율 유지 · 1280 x 1280 박스",
+  },
+] as const satisfies ReadonlyArray<ResizeWorkflowPreset>;
 
 export const resizePresetOptions = [
   {

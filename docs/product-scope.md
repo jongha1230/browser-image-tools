@@ -23,6 +23,7 @@ Build a Korean-first, ad-supported image utility site that keeps all file proces
 
 - Every main route should have unique title and description metadata
 - Tool pages should explain the user problem, local-processing promise, and expected workflow
+- Shared tool workflows can include lightweight use-case presets when they stay within current browser-only capabilities
 - Guides should support search entry points that can link into tool pages
 
 ## Out of scope for this scaffold
@@ -30,4 +31,3 @@ Build a Korean-first, ad-supported image utility site that keeps all file proces
 - Actual image processing implementation
 - Ad network integration
 - Analytics, user accounts, or saved history
-

@@ -14,6 +14,7 @@ import {
 
 import { useImageUploads } from "@/components/image-upload-provider";
 import {
+  compressionWorkflowPresetOptions,
   compressionOutputOptions,
   getCompressionDeltaPercent,
   getCompressionMimeTypeLabel,
@@ -22,9 +23,11 @@ import {
   type CompressionOutputFormat,
 } from "@/lib/compress-image";
 import {
+  conversionWorkflowPresetOptions,
   conversionOutputOptions,
   getConversionOutputDescription,
   getDefaultConversionMimeType,
+  resolveConversionWorkflowMimeType,
 } from "@/lib/convert-image";
 import {
   createImageProcessingWorkerClient,
@@ -52,6 +55,7 @@ import {
   calculateWidthFromHeight,
   fitWithinResizePreset,
   resizePresetOptions,
+  resizeWorkflowPresetOptions,
   validateResizeDimensions,
   type ResizeDimensions,
 } from "@/lib/resize-image";
@@ -64,6 +68,11 @@ type ToolShellVariant =
   | "resize"
   | "convert"
   | "removeExif";
+type WorkflowPresetId =
+  | "blog-upload"
+  | "thumbnail-preview"
+  | "product-image-upload"
+  | "quick-share";
 
 type QueueItemState = {
   status: "queued" | "processing" | "success" | "error";
@@ -298,6 +307,8 @@ export function ToolShell({
   const [resizeWidthValue, setResizeWidthValue] = useState("");
   const [resizeHeightValue, setResizeHeightValue] = useState("");
   const [keepAspectRatio, setKeepAspectRatio] = useState(true);
+  const [selectedWorkflowPresetId, setSelectedWorkflowPresetId] =
+    useState<WorkflowPresetId | null>(null);
   const [lastEditedDimension, setLastEditedDimension] = useState<
     "width" | "height"
   >("width");
@@ -358,6 +369,21 @@ export function ToolShell({
     isCompressTool && selectedItem
       ? resolveCompressionMimeType(selectedItem.file, outputFormat)
       : null;
+  const selectedCompressionWorkflowPreset = isCompressTool
+    ? (compressionWorkflowPresetOptions.find(
+        (preset) => preset.id === selectedWorkflowPresetId,
+      ) ?? null)
+    : null;
+  const selectedResizeWorkflowPreset = isResizeTool
+    ? (resizeWorkflowPresetOptions.find(
+        (preset) => preset.id === selectedWorkflowPresetId,
+      ) ?? null)
+    : null;
+  const selectedConversionWorkflowPreset = isConvertTool
+    ? (conversionWorkflowPresetOptions.find(
+        (preset) => preset.id === selectedWorkflowPresetId,
+      ) ?? null)
+    : null;
   const isQualityEnabled = targetMimeType
     ? isQualityAdjustableFormat(targetMimeType)
     : true;
@@ -679,9 +705,25 @@ export function ToolShell({
     selectedResult &&
     selectedResult.blob.size > selectedItem.file.size
       ? `현재 설정에서는 원본보다 ${formatFileSize(
-          selectedResult.blob.size - selectedItem.file.size,
-        )} 커졌습니다. PNG 무손실 재저장일 수 있으니 더 작게 만들려면 WebP 또는 JPEG를 선택해 주세요.`
+           selectedResult.blob.size - selectedItem.file.size,
+         )} 커졌습니다. PNG 무손실 재저장일 수 있으니 더 작게 만들려면 WebP 또는 JPEG를 선택해 주세요.`
       : null;
+  const workflowPresetNotice =
+    "프리셋은 업로드 전 정리용 추천 시작점이며, 적용 뒤에도 아래 값을 직접 바꿀 수 있습니다. 최종 지원 형식과 크기는 업로드할 서비스에서 한 번 더 확인해 주세요.";
+  const compressionFormatSideEffectMessage =
+    targetMimeType === "image/jpeg" && selectedMimeType !== "image/jpeg"
+      ? "JPEG로 다시 저장하면 투명 영역은 흰색으로 채워질 수 있습니다."
+      : isQualityEnabled
+        ? "품질 값을 낮출수록 파일이 더 작아질 수 있지만 세부 묘사가 줄어들 수 있습니다."
+        : "PNG는 무손실 재저장이라 형식 변경이 용량에 더 큰 영향을 줄 수 있습니다.";
+  const conversionWorkflowPresetNote = selectedConversionWorkflowPreset
+    ? `${selectedConversionWorkflowPreset.label} 프리셋은 현재 기준 파일 형식과 겹치면 ${getCompressionMimeTypeLabel(
+        resolveConversionWorkflowMimeType(
+          selectedMimeType,
+          selectedConversionWorkflowPreset,
+        ),
+      )}로 자동 전환해 바로 비교를 시작합니다.`
+    : "프리셋은 현재 기준 파일과 같은 형식이면 다른 대표 형식으로 자동 전환해 바로 비교를 시작합니다.";
 
   function focusWorkspaceRegion(node: HTMLElement | null) {
     if (!node || typeof window === "undefined") {
@@ -800,6 +842,8 @@ export function ToolShell({
   }, [itemIdsSignature, items]);
 
   useEffect(() => {
+    setSelectedWorkflowPresetId(null);
+
     if (!selectedPreviewUrl) {
       setReferenceDimensions(null);
       setActiveStep("upload");
@@ -962,6 +1006,7 @@ export function ToolShell({
 
   function handleQualityChange(event: ChangeEvent<HTMLInputElement>) {
     setQuality(Number(event.currentTarget.value));
+    setSelectedWorkflowPresetId(null);
     setProcessingError(null);
     setProcessingNote(null);
 
@@ -972,6 +1017,7 @@ export function ToolShell({
 
   function handleCompressOutputChange(event: ChangeEvent<HTMLSelectElement>) {
     setOutputFormat(event.currentTarget.value as CompressionOutputFormat);
+    setSelectedWorkflowPresetId(null);
     setProcessingError(null);
     setProcessingNote(null);
 
@@ -982,6 +1028,7 @@ export function ToolShell({
 
   function handleConversionOutputChange(event: ChangeEvent<HTMLSelectElement>) {
     setConversionOutputFormat(event.currentTarget.value as SupportedImageMimeType);
+    setSelectedWorkflowPresetId(null);
     setProcessingError(null);
     setProcessingNote(null);
 
@@ -994,6 +1041,7 @@ export function ToolShell({
     const nextValue = event.currentTarget.value;
 
     setResizeWidthValue(nextValue);
+    setSelectedWorkflowPresetId(null);
     setLastEditedDimension("width");
     setProcessingError(null);
     setProcessingNote(null);
@@ -1021,6 +1069,7 @@ export function ToolShell({
     const nextValue = event.currentTarget.value;
 
     setResizeHeightValue(nextValue);
+    setSelectedWorkflowPresetId(null);
     setLastEditedDimension("height");
     setProcessingError(null);
     setProcessingNote(null);
@@ -1048,6 +1097,7 @@ export function ToolShell({
     const nextChecked = event.currentTarget.checked;
 
     setKeepAspectRatio(nextChecked);
+    setSelectedWorkflowPresetId(null);
     setProcessingError(null);
     setProcessingNote(null);
 
@@ -1086,6 +1136,7 @@ export function ToolShell({
   function applyResizePreset(preset: ResizeDimensions) {
     setProcessingError(null);
     setProcessingNote(null);
+    setSelectedWorkflowPresetId(null);
 
     if (items.length > 0) {
       setActiveStep("options");
@@ -1099,6 +1150,60 @@ export function ToolShell({
     setResizeWidthValue(String(nextDimensions.width));
     setResizeHeightValue(String(nextDimensions.height));
     setLastEditedDimension("width");
+  }
+
+  function applyCompressionWorkflowPreset(
+    preset: (typeof compressionWorkflowPresetOptions)[number],
+  ) {
+    setOutputFormat(preset.outputFormat);
+    setQuality(preset.quality);
+    setSelectedWorkflowPresetId(preset.id);
+    setProcessingError(null);
+    setProcessingNote(null);
+
+    if (items.length > 0) {
+      setActiveStep("options");
+    }
+  }
+
+  function applyResizeWorkflowPreset(
+    preset: (typeof resizeWorkflowPresetOptions)[number],
+  ) {
+    const nextDimensions =
+      referenceDimensions !== null
+        ? fitWithinResizePreset(referenceDimensions, preset)
+        : {
+            width: preset.width,
+            height: preset.height,
+          };
+
+    setKeepAspectRatio(true);
+    setResizeWidthValue(String(nextDimensions.width));
+    setResizeHeightValue(String(nextDimensions.height));
+    setSelectedWorkflowPresetId(preset.id);
+    setLastEditedDimension("width");
+    setProcessingError(null);
+    setProcessingNote(null);
+
+    if (items.length > 0) {
+      setActiveStep("options");
+    }
+  }
+
+  function applyConversionWorkflowPreset(
+    preset: (typeof conversionWorkflowPresetOptions)[number],
+  ) {
+    setConversionOutputFormat(
+      resolveConversionWorkflowMimeType(selectedMimeType, preset),
+    );
+    setQuality(preset.quality);
+    setSelectedWorkflowPresetId(preset.id);
+    setProcessingError(null);
+    setProcessingNote(null);
+
+    if (items.length > 0) {
+      setActiveStep("options");
+    }
   }
 
   function getWorkerClient() {
@@ -1766,6 +1871,34 @@ export function ToolShell({
             >
               <h3>압축 옵션</h3>
 
+              <div className="tool-shell__field">
+                <div className="tool-shell__field-heading">
+                  <span>업로드 워크플로 프리셋</span>
+                  <small>추천 시작점</small>
+                </div>
+                <div className="tool-shell__preset-list tool-shell__preset-list--workflow">
+                  {compressionWorkflowPresetOptions.map((preset) => (
+                    <button
+                      aria-pressed={selectedCompressionWorkflowPreset?.id === preset.id}
+                      className="tool-shell__preset"
+                      data-active={selectedCompressionWorkflowPreset?.id === preset.id}
+                      disabled={isProcessing}
+                      key={preset.id}
+                      onClick={() => applyCompressionWorkflowPreset(preset)}
+                      type="button"
+                    >
+                      <small>{preset.summary}</small>
+                      <strong>{preset.label}</strong>
+                      <span className="tool-shell__preset-description">
+                        {preset.description}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <p className="tool-shell__helper">{workflowPresetNotice}</p>
+
               <label className="tool-shell__field" htmlFor="compress-output-format">
                 <span>출력 형식</span>
                 <select
@@ -1809,6 +1942,10 @@ export function ToolShell({
               </label>
 
               <p className="tool-shell__helper">
+                {compressionFormatSideEffectMessage}
+              </p>
+
+              <p className="tool-shell__helper">
                 선택한 품질과 출력 형식이 모든 파일에 동일하게 적용됩니다. 결과는
                 개별 저장하거나 ZIP으로 묶어 받을 수 있습니다.
               </p>
@@ -1826,6 +1963,34 @@ export function ToolShell({
               tabIndex={-1}
             >
               <h3>크기 조절 옵션</h3>
+
+              <div className="tool-shell__field">
+                <div className="tool-shell__field-heading">
+                  <span>업로드 워크플로 프리셋</span>
+                  <small>추천 시작점</small>
+                </div>
+                <div className="tool-shell__preset-list tool-shell__preset-list--workflow">
+                  {resizeWorkflowPresetOptions.map((preset) => (
+                    <button
+                      aria-pressed={selectedResizeWorkflowPreset?.id === preset.id}
+                      className="tool-shell__preset"
+                      data-active={selectedResizeWorkflowPreset?.id === preset.id}
+                      disabled={isProcessing}
+                      key={preset.id}
+                      onClick={() => applyResizeWorkflowPreset(preset)}
+                      type="button"
+                    >
+                      <small>{preset.summary}</small>
+                      <strong>{preset.label}</strong>
+                      <span className="tool-shell__preset-description">
+                        {preset.description}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <p className="tool-shell__helper">{workflowPresetNotice}</p>
 
               <div className="tool-shell__dimension-grid">
                 <label className="tool-shell__field" htmlFor="resize-width">
@@ -1883,7 +2048,10 @@ export function ToolShell({
               </label>
 
               <div className="tool-shell__field">
-                <span>자주 쓰는 프리셋</span>
+                <div className="tool-shell__field-heading">
+                  <span>자주 쓰는 크기 박스</span>
+                  <small>직접 규격 선택</small>
+                </div>
                 <div className="tool-shell__preset-list">
                   {resizePresetOptions.map((preset) => {
                     const nextDimensions =
@@ -1934,6 +2102,45 @@ export function ToolShell({
               tabIndex={-1}
             >
               <h3>포맷 변환 옵션</h3>
+
+              <div className="tool-shell__field">
+                <div className="tool-shell__field-heading">
+                  <span>업로드 워크플로 프리셋</span>
+                  <small>추천 시작점</small>
+                </div>
+                <div className="tool-shell__preset-list tool-shell__preset-list--workflow">
+                  {conversionWorkflowPresetOptions.map((preset) => {
+                    const resolvedTargetMimeType =
+                      resolveConversionWorkflowMimeType(selectedMimeType, preset);
+
+                    return (
+                      <button
+                        aria-pressed={selectedConversionWorkflowPreset?.id === preset.id}
+                        className="tool-shell__preset"
+                        data-active={selectedConversionWorkflowPreset?.id === preset.id}
+                        disabled={isProcessing}
+                        key={preset.id}
+                        onClick={() => applyConversionWorkflowPreset(preset)}
+                        type="button"
+                      >
+                        <small>
+                          {`${getCompressionMimeTypeLabel(
+                            resolvedTargetMimeType,
+                          )} · 품질 ${preset.quality}%`}
+                        </small>
+                        <strong>{preset.label}</strong>
+                        <span className="tool-shell__preset-description">
+                          {preset.description}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <p className="tool-shell__helper">{workflowPresetNotice}</p>
+
+              <p className="tool-shell__helper">{conversionWorkflowPresetNote}</p>
 
               <label className="tool-shell__field" htmlFor="convert-output-format">
                 <span>출력 형식</span>
