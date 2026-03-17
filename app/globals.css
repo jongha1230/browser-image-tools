@@ -258,7 +258,9 @@ img {
 
 .hero h1 {
   font-size: clamp(2.3rem, 4vw, 4.2rem);
-  line-height: 0.95;
+  line-height: 1.02;
+  word-break: keep-all;
+  text-wrap: balance;
 }
 
 .hero__body,

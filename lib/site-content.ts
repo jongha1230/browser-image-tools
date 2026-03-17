@@ -2,7 +2,7 @@ export const repositoryUrl = "https://github.com/jongha1230/browser-image-tools"
 export const repositoryIssuesUrl = `${repositoryUrl}/issues`;
 export const contactEmail = "browserimagetools@gmail.com";
 export const contactEmailHref = `mailto:${contactEmail}`;
-export const siteUpdatedAt = "2026-03-16T17:10:00+09:00";
+export const siteUpdatedAt = "2026-03-17T11:45:00+09:00";
 
 export type ToolSlug =
   | "compress-image"
@@ -94,9 +94,9 @@ export type GuideRoute =
   | GuideRouteBase<"batch-resize-checklist">;
 
 export const siteName = "브라우저 이미지 툴";
-export const siteTagline = "브라우저에서 이미지 압축·리사이즈·변환·EXIF 제거";
+export const siteTagline = "업로드 전 이미지 정리, 브라우저 로컬 처리";
 export const siteDescription =
-  "업로드 전 이미지 압축, 리사이즈, 포맷 변환, EXIF 제거와 배치 내보내기를 브라우저에서 처리하는 로컬 이미지 도구입니다.";
+  "블로그 업로드 전 점검, 썸네일·상품 이미지 준비를 위해 이미지 압축, 리사이즈, 포맷 변환, EXIF 제거와 배치 내보내기를 브라우저에서 처리하는 로컬 이미지 도구입니다.";
 
 export const primaryNav = [
   { href: "/tools", label: "도구" },
@@ -119,11 +119,11 @@ export const toolRoutes = [
     title: "이미지 압축 도구",
     shortLabel: "압축",
     description:
-      "업로드 전에 JPEG, PNG, WebP 사진과 캡처 용량을 줄이는 로컬 이미지 압축 도구입니다.",
+      "블로그 업로드 전 점검과 썸네일·상품 이미지 용량 정리에 맞춘 로컬 이미지 압축 도구입니다.",
     metadataDescription:
-      "업로드 전에 JPEG, PNG, WebP 이미지 용량을 브라우저에서 줄이고 여러 장 결과를 개별 저장하거나 ZIP으로 내려받는 로컬 이미지 압축 도구입니다.",
+      "블로그 업로드 전 점검과 썸네일·상품 이미지 준비를 위해 JPEG, PNG, WebP 이미지 용량을 브라우저에서 줄이고 여러 장 결과를 저장하는 로컬 이미지 압축 도구입니다.",
     intro:
-      "블로그 발행, 상품 이미지 업로드, 커뮤니티 첨부 전에 여러 장 용량을 한 번에 줄이는 흐름에 맞춰 구성했습니다.",
+      "업로드 전에 사진과 캡처 용량을 여러 장 한 번에 줄이고, 결과를 비교해 바로 저장하는 흐름에 맞춰 구성했습니다.",
     highlights: [
       "품질과 출력 형식을 정한 뒤 여러 파일에 같은 기준을 한 번에 적용할 수 있습니다.",
       "원본과 결과의 파일 크기, 형식, 해상도를 같은 화면에서 바로 비교할 수 있습니다.",
@@ -142,11 +142,11 @@ export const toolRoutes = [
     title: "이미지 리사이즈 도구",
     shortLabel: "리사이즈",
     description:
-      "썸네일, 상품 이미지, 문서 첨부 규격에 맞춰 픽셀 크기를 조절하는 로컬 이미지 리사이즈 도구입니다.",
+      "썸네일, 상품 이미지, 블로그 본문 규격을 맞추는 로컬 이미지 리사이즈 도구입니다.",
     metadataDescription:
-      "썸네일, 상품 이미지, 문서 첨부용 JPEG, PNG, WebP 해상도를 브라우저에서 조정하고 여러 장 결과를 개별 저장하거나 ZIP으로 내려받는 이미지 리사이즈 도구입니다.",
+      "썸네일, 상품 이미지, 블로그 업로드용 JPEG, PNG, WebP 해상도를 브라우저에서 맞추고 여러 장 결과를 저장하는 이미지 리사이즈 도구입니다.",
     intro:
-      "가로·세로 입력, 비율 유지, 자주 쓰는 프리셋으로 블로그·쇼핑몰 업로드 규격을 여러 장에 같은 기준으로 맞출 수 있습니다.",
+      "블로그 대표 이미지, 썸네일, 상품 이미지처럼 크기 기준이 있는 파일을 여러 장 한 번에 같은 흐름으로 맞출 수 있습니다.",
     highlights: [
       "가로와 세로 픽셀 값을 직접 입력하거나 프리셋으로 빠르게 시작할 수 있습니다.",
       "비율 유지를 켜면 원본 비율을 살린 채 각 파일 크기를 자동으로 계산합니다.",
@@ -165,11 +165,11 @@ export const toolRoutes = [
     title: "이미지 포맷 변환 도구",
     shortLabel: "변환",
     description:
-      "JPEG, PNG, WebP 사이를 바꿔 업로드 호환성, 투명 배경, 용량 기준을 맞추는 로컬 이미지 변환 도구입니다.",
+      "블로그 업로드, 썸네일, 상세 이미지 준비에 맞춰 JPEG, PNG, WebP를 정리하는 로컬 이미지 변환 도구입니다.",
     metadataDescription:
-      "JPEG, PNG, WebP 이미지를 브라우저에서 다른 형식으로 변환하고 여러 장 결과를 개별 저장하거나 ZIP으로 내려받는 로컬 이미지 변환 도구입니다.",
+      "블로그 업로드와 썸네일·상품 이미지 준비를 위해 JPEG, PNG, WebP 이미지를 브라우저에서 다른 형식으로 변환하고 여러 장 결과를 저장하는 로컬 이미지 변환 도구입니다.",
     intro:
-      "사진, 로고, 캡처를 업로드 목적에 맞는 형식으로 여러 장 한 번에 바꾸고 품질과 저장 형식을 바로 비교할 수 있습니다.",
+      "사진, 캡처, 로고를 업로드 목적에 맞는 형식으로 여러 장 한 번에 바꾸고 용량과 호환성을 함께 점검할 수 있습니다.",
     highlights: [
       "JPEG, PNG, WebP의 차이와 투명 배경 처리 방식을 바로 확인할 수 있습니다.",
       "원본과 결과의 형식, 용량, 저장 파일명을 한 화면에서 비교할 수 있습니다.",
@@ -188,11 +188,11 @@ export const toolRoutes = [
     title: "사진 EXIF 제거 도구",
     shortLabel: "EXIF 제거",
     description:
-      "사진 공유 전에 위치, 기기, 촬영 시각 같은 EXIF 메타데이터를 정리하는 로컬 EXIF 제거 도구입니다.",
+      "공개 업로드나 공유 전에 위치, 기기, 촬영 시각 같은 EXIF 메타데이터를 정리하는 로컬 EXIF 제거 도구입니다.",
     metadataDescription:
-      "사진 EXIF 메타데이터를 브라우저에서 재저장 방식으로 정리하고 여러 장 결과를 개별 저장하거나 ZIP으로 내려받는 로컬 EXIF 제거 도구입니다.",
+      "블로그 첨부와 공개 공유 전에 사진 EXIF 메타데이터를 브라우저에서 재저장 방식으로 정리하고 여러 장 결과를 저장하는 로컬 EXIF 제거 도구입니다.",
     intro:
-      "공개 게시물, 중고거래, 제보용 첨부처럼 공유 전 개인정보가 신경 쓰이는 상황에서 여러 장을 한 번에 다시 저장할 수 있습니다.",
+      "블로그 첨부, 중고거래, 제보용 이미지처럼 공유 전 메타데이터 점검이 필요한 파일을 여러 장 한 번에 다시 저장할 수 있습니다.",
     highlights: [
       "EXIF에 어떤 정보가 들어갈 수 있는지부터 먼저 설명합니다.",
       "원본 파일을 서버에 보내지 않고 브라우저 안에서만 다시 저장합니다.",
