@@ -8,4 +8,8 @@ export default defineConfig({
       "@": path.resolve(__dirname, "."),
     },
   },
+  test: {
+    include: ["tests/**/*.test.ts"],
+    exclude: ["tests/e2e/**"],
+  },
 });
