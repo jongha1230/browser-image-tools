@@ -22,6 +22,10 @@ import { createStoredZipArchive } from "@/lib/zip-archive";
 
 import { focusWorkspaceRegion } from "./use-tool-shell-effects";
 import {
+  getProcessingCancellationMessage,
+  resetQueueStateAfterCancellation,
+} from "./processing-run";
+import {
   downloadBlob,
   type ProcessingEngine,
   type QueueItemState,
@@ -32,6 +36,7 @@ type UseToolShellProcessingArgs = {
   currentOptions: ImageProcessOptions | null;
   dropzoneRef: RefObject<HTMLDivElement | null>;
   hasValidResizeOptions: boolean;
+  isProcessing: boolean;
   isResizeTool: boolean;
   items: UploadedImage[];
   processingEngine: ProcessingEngine;
@@ -60,6 +65,7 @@ export function useToolShellProcessing({
   currentOptions,
   dropzoneRef,
   hasValidResizeOptions,
+  isProcessing,
   isResizeTool,
   items,
   processingEngine,
@@ -94,6 +100,12 @@ export function useToolShellProcessing({
     window.setTimeout(() => {
       focusWorkspaceRegion(dropzoneRef.current);
     }, 120);
+  }
+
+  function invalidateCurrentRun() {
+    runIdRef.current += 1;
+    workerClientRef.current?.terminate();
+    workerClientRef.current = null;
   }
 
   async function handleProcessAll() {
@@ -216,11 +228,28 @@ export function useToolShellProcessing({
       });
     }
 
+    if (runIdRef.current !== runId) {
+      return;
+    }
+
     if (engine === "worker") {
       setProcessingEngine("worker");
     }
 
     setIsProcessing(false);
+  }
+
+  function handleCancelProcessing() {
+    if (!isProcessing) {
+      return;
+    }
+
+    invalidateCurrentRun();
+    setIsProcessing(false);
+    setProcessingError(null);
+    setProcessingNote(getProcessingCancellationMessage(successCount));
+    setQueueState((current) => resetQueueStateAfterCancellation(current));
+    setActiveStep(successCount > 0 ? "export" : "options");
   }
 
   async function handleDownloadZip() {
@@ -277,6 +306,7 @@ export function useToolShellProcessing({
   }
 
   return {
+    handleCancelProcessing,
     handleDownloadResult,
     handleDownloadZip,
     handleProcessAll,

@@ -33,11 +33,13 @@ import {
 } from "./shared";
 
 type ToolShellWorkflowSidebarProps = {
+  canCancelProcessing: boolean;
   canDownloadZip: boolean;
   canProcess: boolean;
   completedCount: number;
   currentStepMessage: string;
   errorCount: number;
+  handleCancelProcessing: () => void;
   handleDownloadResult: (itemId: string) => void;
   handleDownloadZip: () => void;
   handleProcessAll: () => void;
@@ -69,6 +71,7 @@ type ToolShellWorkflowSidebarProps = {
 };
 
 type ToolShellOptionPanelsProps = {
+  canCancelProcessing: boolean;
   canDownloadZip: boolean;
   canProcess: boolean;
   completedCount: number;
@@ -78,6 +81,7 @@ type ToolShellOptionPanelsProps = {
   conversionWorkflowPresetNote: string;
   currentStepMessage: string;
   errorCount: number;
+  handleCancelProcessing: () => void;
   handleCompressOutputChange: (event: ChangeEvent<HTMLSelectElement>) => void;
   handleConversionOutputChange: (
     event: ChangeEvent<HTMLSelectElement>,
@@ -150,11 +154,13 @@ type ToolShellOptionPanelsProps = {
 };
 
 function ToolShellWorkflowSidebar({
+  canCancelProcessing,
   canDownloadZip,
   canProcess,
   completedCount,
   currentStepMessage,
   errorCount,
+  handleCancelProcessing,
   handleDownloadResult,
   handleDownloadZip,
   handleProcessAll,
@@ -240,11 +246,11 @@ function ToolShellWorkflowSidebar({
             <>
               <button
                 className={hasResults ? "button-muted" : "button-link"}
-                disabled={!canProcess}
-                onClick={handleProcessAll}
+                disabled={isProcessing ? !canCancelProcessing : !canProcess}
+                onClick={isProcessing ? handleCancelProcessing : handleProcessAll}
                 type="button"
               >
-                {isProcessing ? "배치 처리 중..." : primaryActionLabel}
+                {isProcessing ? "처리 취소" : primaryActionLabel}
               </button>
               <button
                 className={
@@ -347,6 +353,7 @@ function ToolShellWorkflowSidebar({
 }
 
 export function ToolShellOptionPanels({
+  canCancelProcessing,
   canDownloadZip,
   canProcess,
   completedCount,
@@ -356,6 +363,7 @@ export function ToolShellOptionPanels({
   conversionWorkflowPresetNote,
   currentStepMessage,
   errorCount,
+  handleCancelProcessing,
   handleCompressOutputChange,
   handleConversionOutputChange,
   handleDownloadResult,
@@ -422,11 +430,13 @@ export function ToolShellOptionPanels({
 
   const workflowSidebar = (
     <ToolShellWorkflowSidebar
+      canCancelProcessing={canCancelProcessing}
       canDownloadZip={canDownloadZip}
       canProcess={canProcess}
       completedCount={completedCount}
       currentStepMessage={currentStepMessage}
       errorCount={errorCount}
+      handleCancelProcessing={handleCancelProcessing}
       handleDownloadResult={handleDownloadResult}
       handleDownloadZip={handleDownloadZip}
       handleProcessAll={handleProcessAll}
