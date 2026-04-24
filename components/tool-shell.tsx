@@ -247,6 +247,7 @@ export function ToolShell({
     items.length > 0 &&
     !isProcessing &&
     (!isResizeTool || Boolean(resizeValidation?.ok));
+  const canCancelProcessing = isProcessing;
   const canDownloadZip =
     toolVariant !== null && successCount > 0 && !isProcessing && !isPreparingZip;
   const showProgress = toolVariant !== null && (isProcessing || hasResults);
@@ -444,11 +445,16 @@ export function ToolShell({
     workflowSummaryRef,
   });
 
-  const { handleDownloadResult, handleDownloadZip, handleProcessAll } =
-    useToolShellProcessing({
+  const {
+    handleCancelProcessing,
+    handleDownloadResult,
+    handleDownloadZip,
+    handleProcessAll,
+  } = useToolShellProcessing({
       currentOptions,
       dropzoneRef,
       hasValidResizeOptions: Boolean(resizeValidation?.ok),
+      isProcessing,
       isResizeTool,
       items,
       processingEngine,
@@ -779,6 +785,7 @@ export function ToolShell({
           applyConversionWorkflowPreset={applyConversionWorkflowPreset}
           applyResizePreset={applyResizePreset}
           applyResizeWorkflowPreset={applyResizeWorkflowPreset}
+          canCancelProcessing={canCancelProcessing}
           canDownloadZip={canDownloadZip}
           canProcess={canProcess}
           completedCount={completedCount}
@@ -788,6 +795,7 @@ export function ToolShell({
           conversionWorkflowPresetNote={conversionWorkflowPresetNote}
           currentStepMessage={currentStepMessage}
           errorCount={errorCount}
+          handleCancelProcessing={handleCancelProcessing}
           handleCompressOutputChange={handleCompressOutputChange}
           handleConversionOutputChange={handleConversionOutputChange}
           handleDownloadResult={handleDownloadResult}

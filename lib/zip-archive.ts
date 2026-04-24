@@ -1,8 +1,33 @@
+import {
+  getZipArchiveSizeLimitMessage,
+  PROCESSING_LIMITS,
+} from "./processing-limits";
+
 export type ZipArchiveEntry = {
   data: Uint8Array;
   fileName: string;
   lastModified?: number;
 };
+
+export type StoredZipArchiveLayoutEntry = {
+  dataLength: number;
+  fileNameLength: number;
+};
+
+export class ZipArchiveLimitError extends Error {
+  constructor(
+    message: string,
+    readonly code:
+      | "too-many-entries"
+      | "entry-too-large"
+      | "central-directory-too-large"
+      | "local-header-offset-too-large"
+      | "archive-too-large",
+  ) {
+    super(message);
+    this.name = "ZipArchiveLimitError";
+  }
+}
 
 const crcTable = new Uint32Array(256).map((_, index) => {
   let value = index;
@@ -55,15 +80,90 @@ function writeUint32(
   view.setUint32(offset, value, true);
 }
 
+const ZIP_LOCAL_FILE_HEADER_SIZE = 30;
+const ZIP_CENTRAL_DIRECTORY_HEADER_SIZE = 46;
+const ZIP_END_RECORD_SIZE = 22;
+const ZIP_CLASSIC_32BIT_MAX = 0xffffffff;
+
+export function calculateStoredZipArchiveLayout(
+  entries: readonly StoredZipArchiveLayoutEntry[],
+) {
+  if (entries.length > PROCESSING_LIMITS.maxZipEntries) {
+    throw new ZipArchiveLimitError(
+      `현재 ZIP 다운로드는 최대 ${PROCESSING_LIMITS.maxZipEntries.toLocaleString("ko-KR")}개 파일까지만 지원합니다.`,
+      "too-many-entries",
+    );
+  }
+
+  let fileSectionSize = 0;
+  let centralDirectorySize = 0;
+
+  for (const entry of entries) {
+    if (entry.dataLength > PROCESSING_LIMITS.maxZipEntrySizeBytes) {
+      throw new ZipArchiveLimitError(
+        "ZIP에 담을 결과 파일이 너무 큽니다. 현재 브라우저 ZIP은 4GB보다 큰 개별 파일을 지원하지 않습니다.",
+        "entry-too-large",
+      );
+    }
+
+    if (fileSectionSize > ZIP_CLASSIC_32BIT_MAX) {
+      throw new ZipArchiveLimitError(
+        "ZIP 파일 오프셋이 classic ZIP 한계를 넘어 다운로드를 중단했습니다.",
+        "local-header-offset-too-large",
+      );
+    }
+
+    fileSectionSize +=
+      ZIP_LOCAL_FILE_HEADER_SIZE + entry.fileNameLength + entry.dataLength;
+    centralDirectorySize +=
+      ZIP_CENTRAL_DIRECTORY_HEADER_SIZE + entry.fileNameLength;
+
+    if (centralDirectorySize > ZIP_CLASSIC_32BIT_MAX) {
+      throw new ZipArchiveLimitError(
+        "ZIP 중앙 디렉터리 크기가 classic ZIP 한계를 넘어 다운로드를 중단했습니다.",
+        "central-directory-too-large",
+      );
+    }
+  }
+
+  if (fileSectionSize > ZIP_CLASSIC_32BIT_MAX) {
+    throw new ZipArchiveLimitError(
+      "ZIP 파일 오프셋이 classic ZIP 한계를 넘어 다운로드를 중단했습니다.",
+      "local-header-offset-too-large",
+    );
+  }
+
+  const totalSize =
+    fileSectionSize + centralDirectorySize + ZIP_END_RECORD_SIZE;
+
+  if (totalSize > PROCESSING_LIMITS.maxZipArchiveSizeBytes) {
+    throw new ZipArchiveLimitError(
+      getZipArchiveSizeLimitMessage(),
+      "archive-too-large",
+    );
+  }
+
+  return {
+    centralDirectoryOffset: fileSectionSize,
+    centralDirectorySize,
+    totalSize,
+  };
+}
+
 export function createStoredZipArchive(entries: readonly ZipArchiveEntry[]) {
   const encoder = new TextEncoder();
   const centralDirectoryParts: Uint8Array[] = [];
   const fileParts: Uint8Array[] = [];
+  const layoutEntries = entries.map((entry) => ({
+    dataLength: entry.data.length,
+    fileNameLength: encoder.encode(entry.fileName).length,
+  }));
+  const layout = calculateStoredZipArchiveLayout(layoutEntries);
   let currentOffset = 0;
 
   for (const entry of entries) {
     const nameBytes = encoder.encode(entry.fileName);
-    const header = new Uint8Array(30 + nameBytes.length);
+    const header = new Uint8Array(ZIP_LOCAL_FILE_HEADER_SIZE + nameBytes.length);
     const headerView = new DataView(
       header.buffer,
       header.byteOffset,
@@ -88,7 +188,9 @@ export function createStoredZipArchive(entries: readonly ZipArchiveEntry[]) {
 
     fileParts.push(header, entry.data);
 
-    const centralHeader = new Uint8Array(46 + nameBytes.length);
+    const centralHeader = new Uint8Array(
+      ZIP_CENTRAL_DIRECTORY_HEADER_SIZE + nameBytes.length,
+    );
     const centralView = new DataView(
       centralHeader.buffer,
       centralHeader.byteOffset,
@@ -113,11 +215,7 @@ export function createStoredZipArchive(entries: readonly ZipArchiveEntry[]) {
     currentOffset += header.length + entry.data.length;
   }
 
-  const centralDirectorySize = centralDirectoryParts.reduce(
-    (sum, part) => sum + part.length,
-    0,
-  );
-  const endRecord = new Uint8Array(22);
+  const endRecord = new Uint8Array(ZIP_END_RECORD_SIZE);
   const endView = new DataView(
     endRecord.buffer,
     endRecord.byteOffset,
@@ -127,12 +225,10 @@ export function createStoredZipArchive(entries: readonly ZipArchiveEntry[]) {
   writeUint32(endView, 0, 0x06054b50);
   writeUint16(endView, 8, entries.length);
   writeUint16(endView, 10, entries.length);
-  writeUint32(endView, 12, centralDirectorySize);
-  writeUint32(endView, 16, currentOffset);
+  writeUint32(endView, 12, layout.centralDirectorySize);
+  writeUint32(endView, 16, layout.centralDirectoryOffset);
 
-  const totalSize =
-    currentOffset + centralDirectorySize + endRecord.length;
-  const archive = new Uint8Array(totalSize);
+  const archive = new Uint8Array(layout.totalSize);
   let cursor = 0;
 
   for (const part of [...fileParts, ...centralDirectoryParts, endRecord]) {

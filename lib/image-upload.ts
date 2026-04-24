@@ -1,3 +1,10 @@
+import {
+  formatBytes,
+  prefixFileLimitMessage,
+  PROCESSING_LIMITS,
+  validateImageFileLimit,
+} from "./processing-limits";
+
 export type UploadFileLike = {
   name: string;
   size: number;
@@ -6,7 +13,12 @@ export type UploadFileLike = {
 };
 
 export type UploadMode = "append" | "replace";
-export type UploadValidationIssueCode = "duplicate" | "unsupported-type";
+export type UploadValidationIssueCode =
+  | "duplicate"
+  | "unsupported-type"
+  | "file-too-large"
+  | "too-many-files"
+  | "batch-too-large";
 export type UploadQueueStatus = "queued" | "processing" | "success" | "error";
 
 export type UploadValidationIssue = {
@@ -113,6 +125,8 @@ export function validateImageFiles<TFile extends UploadFileLike>(
   const accepted: TFile[] = [];
   const rejected: UploadValidationIssue[] = [];
   const seenIds = new Set(existingFiles.map((file) => createUploadFileId(file)));
+  let nextFileCount = existingFiles.length;
+  let nextTotalBytes = existingFiles.reduce((sum, file) => sum + file.size, 0);
 
   for (const file of files) {
     const fileName = file.name || "이름 없는 파일";
@@ -127,6 +141,17 @@ export function validateImageFiles<TFile extends UploadFileLike>(
       continue;
     }
 
+    const fileSizeValidation = validateImageFileLimit(file);
+
+    if (!fileSizeValidation.ok) {
+      rejected.push({
+        code: "file-too-large",
+        fileName,
+        message: prefixFileLimitMessage(fileName, fileSizeValidation.message),
+      });
+      continue;
+    }
+
     if (seenIds.has(fileId)) {
       rejected.push({
         code: "duplicate",
@@ -136,8 +161,34 @@ export function validateImageFiles<TFile extends UploadFileLike>(
       continue;
     }
 
+    if (nextFileCount + 1 > PROCESSING_LIMITS.maxBatchFiles) {
+      rejected.push({
+        code: "too-many-files",
+        fileName,
+        message: prefixFileLimitMessage(
+          fileName,
+          `한 번에 처리할 수 있는 이미지는 최대 ${PROCESSING_LIMITS.maxBatchFiles.toLocaleString("ko-KR")}개입니다.`,
+        ),
+      });
+      continue;
+    }
+
+    if (nextTotalBytes + file.size > PROCESSING_LIMITS.maxBatchTotalBytes) {
+      rejected.push({
+        code: "batch-too-large",
+        fileName,
+        message: prefixFileLimitMessage(
+          fileName,
+          `선택한 이미지의 전체 용량이 너무 큽니다. 총 ${formatBytes(PROCESSING_LIMITS.maxBatchTotalBytes)} 이하로 줄여 주세요.`,
+        ),
+      });
+      continue;
+    }
+
     seenIds.add(fileId);
     accepted.push(file);
+    nextFileCount += 1;
+    nextTotalBytes += file.size;
   }
 
   return { accepted, rejected };
@@ -166,22 +217,5 @@ export function shouldReplaceUploadQueue({
 }
 
 export function formatFileSize(bytes: number) {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-
-  const units = ["KB", "MB", "GB"] as const;
-  let value = bytes;
-  let unitIndex = -1;
-
-  do {
-    value /= 1024;
-    unitIndex += 1;
-  } while (value >= 1024 && unitIndex < units.length - 1);
-
-  const maximumFractionDigits = value >= 100 ? 0 : value >= 10 ? 1 : 2;
-
-  return `${new Intl.NumberFormat("ko-KR", {
-    maximumFractionDigits,
-  }).format(value)} ${units[unitIndex]}`;
+  return formatBytes(bytes);
 }

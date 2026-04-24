@@ -4,6 +4,22 @@
 
 브라우저에서 블로그 업로드 전 점검, 썸네일·상품 이미지 준비, EXIF 정리까지 처리하는 로컬 이미지 도구 사이트입니다. 이 저장소는 업로드 직전 반복되는 이미지 정리 작업에 집중한 프론트엔드 프로젝트이며, 파일 처리와 다운로드 준비를 모두 브라우저 안에서 끝내는 흐름을 구현합니다.
 
+## 빠른 이해
+
+- 한 줄 소개: 서버 업로드 없이 브라우저 안에서 이미지 압축, 리사이즈, 포맷 변환, EXIF 제거, ZIP 다운로드까지 처리하는 한국어 중심 도구 모음입니다.
+- 해결하려는 문제: 업로드 직전 반복되는 이미지 정리 작업을 빠르게 끝내되, 원본 파일을 서버에 보내지 않도록 합니다.
+- 핵심 기능: 압축, 리사이즈, 포맷 변환, EXIF 제거, 배치 다운로드, ZIP 내보내기
+- 기술 스택: Next.js App Router, React 19, TypeScript, Canvas, Web Worker, Vitest, Playwright
+- 아키텍처 하이라이트: 설명형 SSR 페이지 + 공통 ToolShell, worker-first / main-thread fallback, classic ZIP guard, 로컬 전용 처리
+- Testing / Quality: GitHub Actions에서 `lint`, `typecheck`, `test`, `test:e2e`, `build`를 실행합니다.
+- Known limitations: Chromium-first 검증, JPEG/PNG/WebP만 지원, explicit file/batch/canvas/ZIP limits, ZIP64 미지원
+- Local setup: `npm ci && npm run dev`
+- Demo: [https://browser-image-tools.vercel.app](https://browser-image-tools.vercel.app)
+- Case study: [docs/case-study.md](./docs/case-study.md)
+- Limits: [docs/limits.md](./docs/limits.md)
+- Browser compatibility: [docs/browser-compatibility.md](./docs/browser-compatibility.md)
+- Testing details: [docs/testing.md](./docs/testing.md)
+
 ## 공개 데모
 
 - Production demo: [https://browser-image-tools.vercel.app](https://browser-image-tools.vercel.app)
@@ -73,7 +89,7 @@
 - 지원 형식은 JPEG, PNG, WebP에 한정됩니다.
 - 백엔드 업로드, 계정, 데이터베이스, 클라우드 동기화, PDF, HEIC, RAW, 비디오, 엔드유저 AI 기능은 포함하지 않습니다.
 
-자세한 제한 사항은 [docs/known-limitations.md](./docs/known-limitations.md)를 확인하면 됩니다.
+자세한 제한 사항은 [docs/known-limitations.md](./docs/known-limitations.md), [docs/limits.md](./docs/limits.md), [docs/browser-compatibility.md](./docs/browser-compatibility.md)를 확인하면 됩니다.
 
 ## 로컬 실행
 
@@ -90,6 +106,7 @@ npm run dev
 - `npm run lint`: ESLint 실행
 - `npm run typecheck`: TypeScript 검사
 - `npm run test`: Vitest 실행
+- `npm run test:e2e`: Playwright E2E 실행
 - `npm run build`: 프로덕션 빌드
 - `npm run start`: 프로덕션 서버 실행
 
@@ -105,6 +122,10 @@ npm run dev
 ## 문서
 
 - [Proof assets package](./docs/proof-assets.md)
+- [Case study](./docs/case-study.md)
+- [Processing limits](./docs/limits.md)
+- [Browser compatibility](./docs/browser-compatibility.md)
+- [Testing guide](./docs/testing.md)
 - [브라우저 지원 / known limitations](./docs/known-limitations.md)
 - [제품 범위](./docs/product-scope.md)
 - [라우트 맵](./docs/route-map.md)
