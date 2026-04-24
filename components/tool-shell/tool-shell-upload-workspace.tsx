@@ -8,6 +8,7 @@ import type {
 } from "react";
 
 import { formatFileSize, supportedImageAccept } from "@/lib/image-upload";
+import { PROCESSING_LIMITS } from "@/lib/processing-limits";
 
 import {
   getDropzoneCopy,
@@ -98,6 +99,12 @@ export function ToolShellUploadWorkspace({
   uploadStepMessage,
   variant,
 }: ToolShellUploadWorkspaceProps) {
+  const uploadLimitSummary = `파일당 ${formatFileSize(
+    PROCESSING_LIMITS.maxFileSizeBytes,
+  )}, 최대 ${PROCESSING_LIMITS.maxBatchFiles.toLocaleString("ko-KR")}개, 총 ${formatFileSize(
+    PROCESSING_LIMITS.maxBatchTotalBytes,
+  )}까지 안정적으로 처리할 수 있습니다.`;
+
   return (
     <div className="tool-shell__primary-grid">
       <div
@@ -152,6 +159,7 @@ export function ToolShellUploadWorkspace({
         <ul className="tool-shell__drop-highlights">
           <li>브라우저 안에서만 파일 보관 및 처리</li>
           <li>JPEG, PNG, WebP 파일만 허용</li>
+          <li>{uploadLimitSummary}</li>
           <li>
             {getDropzoneCopy(
               variant,

@@ -7,6 +7,7 @@ import {
   type ProcessedImagePayload,
 } from "./image-processing";
 import { getSupportedImageMimeType, type SupportedImageMimeType } from "./image-upload";
+import { validateCanvasDimensions } from "./processing-limits";
 
 const canvasErrorMessage =
   "브라우저에서 이미지 캔버스를 준비하지 못했습니다. 다른 브라우저에서 다시 시도해 주세요.";
@@ -85,6 +86,15 @@ export async function processImageFileOnMainThread(
   options: ImageProcessOptions,
 ): Promise<ProcessedImagePayload> {
   const image = await loadImageElement(sourceUrl);
+  const sourceDimensionValidation = validateCanvasDimensions({
+    width: image.naturalWidth,
+    height: image.naturalHeight,
+  });
+
+  if (!sourceDimensionValidation.ok) {
+    throw new Error(sourceDimensionValidation.message);
+  }
+
   const plan = resolveImageProcessingPlan(
     file,
     {
@@ -93,6 +103,15 @@ export async function processImageFileOnMainThread(
     },
     options,
   );
+  const planDimensionValidation = validateCanvasDimensions({
+    width: plan.width,
+    height: plan.height,
+  });
+
+  if (!planDimensionValidation.ok) {
+    throw new Error(planDimensionValidation.message);
+  }
+
   const canvas = document.createElement("canvas");
 
   canvas.width = plan.width;

@@ -1,5 +1,6 @@
 import { getCompressionOutputExtension } from "./compress-image";
 import type { SupportedImageMimeType } from "./image-upload";
+import { PROCESSING_LIMITS } from "./processing-limits";
 
 export type ResizeDimensions = {
   width: number;
@@ -22,7 +23,7 @@ export type ResizeWorkflowPreset = ResizeDimensions & {
   summary: string;
 };
 
-export const maxResizeDimension = 16_384;
+export const maxResizeDimension = PROCESSING_LIMITS.maxCanvasDimension;
 
 export const resizeWorkflowPresetOptions = [
   {

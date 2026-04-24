@@ -7,6 +7,7 @@ import {
   type ImageWorkerResponse,
 } from "./image-processing";
 import { getSupportedImageMimeType } from "./image-upload";
+import { validateCanvasDimensions } from "./processing-limits";
 
 const workerScope = self as DedicatedWorkerGlobalScope;
 
@@ -28,6 +29,15 @@ async function processImageInWorker({
   const bitmap = await createImageBitmap(file);
 
   try {
+    const sourceDimensionValidation = validateCanvasDimensions({
+      width: bitmap.width,
+      height: bitmap.height,
+    });
+
+    if (!sourceDimensionValidation.ok) {
+      throw new Error(sourceDimensionValidation.message);
+    }
+
     const plan = resolveImageProcessingPlan(
       file,
       {
@@ -36,6 +46,15 @@ async function processImageInWorker({
       },
       options,
     );
+    const planDimensionValidation = validateCanvasDimensions({
+      width: plan.width,
+      height: plan.height,
+    });
+
+    if (!planDimensionValidation.ok) {
+      throw new Error(planDimensionValidation.message);
+    }
+
     const canvas = new OffscreenCanvas(plan.width, plan.height);
     const context = canvas.getContext("2d");
 
