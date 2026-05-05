@@ -136,7 +136,7 @@ export function ToolShellUploadWorkspace({
         />
         <strong id={dropzoneTitleId}>{dropzoneTitle}</strong>
         <p id={dropzoneHintId}>
-          {dropzoneHint}
+          {dropzoneHint}{" "}
           <span className="visually-hidden">
             키보드 사용 시 Ctrl + V, Enter, Space를 지원합니다.
           </span>
