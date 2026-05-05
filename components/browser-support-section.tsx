@@ -18,16 +18,16 @@ export function BrowserSupportSection() {
           <h3>권장 브라우저</h3>
           <p>
             최신 Chrome, Edge 같은 Chromium 계열 데스크톱 브라우저를 가장 먼저
-            권장합니다. 2026년 3월 16일 기준 공개 수동 확인 범위도 production
-            demo의 Chromium 흐름입니다.
+            권장합니다. 2026년 3월 16일 기준 공개 수동 확인 범위도 배포된
+            데모의 Chromium 흐름입니다.
           </p>
         </div>
         <div className="card">
           <h3>다른 브라우저 기대치</h3>
           <p>
-            Safari와 Firefox도 Canvas, Blob, 다운로드 링크, Web Worker 같은
-            필수 웹 API가 정상 동작하면 사용할 수 있습니다. 다만 현재 저장소에서
-            공개적으로 수동 검증했다고 말할 수 있는 범위는 아닙니다.
+            Safari와 Firefox도 캔버스, 파일 생성, 다운로드 링크, 백그라운드 처리 같은
+            필수 브라우저 기능이 정상 동작하면 사용할 수 있습니다. 다만 현재 저장소에서
+            넓은 범위를 직접 수동 검증했다고 말할 수 있는 단계는 아닙니다.
           </p>
         </div>
         <div className="card">

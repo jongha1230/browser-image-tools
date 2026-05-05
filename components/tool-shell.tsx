@@ -276,7 +276,7 @@ export function ToolShell({
       ? "다음 파일을 추가하면 새 작업으로 바로 시작합니다"
       : "이미지를 더 추가하거나 현재 큐를 조정하세요";
   const dropzoneHint = !hasItems
-    ? `지원 형식은 ${supportedImageTypesText}입니다. 붙여넣기 이미지는 이 페이지에서 바로 추가할 수 있고, 드롭 영역에 포커스한 뒤 Enter 또는 Space 로도 파일 선택 창을 열 수 있습니다.`
+    ? `지원 형식은 ${supportedImageTypesText}입니다. 붙여넣기 이미지는 이 페이지에서 바로 추가할 수 있고, 드롭 영역에 포커스한 뒤 Enter 또는 Space로도 파일 선택 창을 열 수 있습니다.`
     : shouldReplaceOnAdd
       ? "새 파일을 선택, 드롭, 붙여넣기하면 현재 단일 작업을 자동으로 교체합니다. 여러 파일을 한 번에 고르면 이전 단일 세션 대신 새 배치로 시작합니다."
       : `추가한 파일은 현재 큐 뒤에 이어 붙습니다. ${supportedImageTypesText} 이미지를 다시 선택하거나 클립보드 붙여넣기로 바로 더할 수 있습니다.`;
